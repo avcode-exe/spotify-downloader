@@ -1,0 +1,48 @@
+name: Build Windows EXE
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: ['**']
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Windows EXE
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build with PyInstaller
+        run: |
+          if (-not (Test-Path assets)) { New-Item -ItemType Directory -Path assets }
+          python generate_icon.py
+          pyinstaller --noconfirm --clean `
+            --name "SpotifyDownloader" `
+            --add-data "src;src" `
+            --hidden-import customtkinter `
+            gui_app.py
+
+      - name: Upload EXE artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SpotifyDownloader-win-${{ matrix.python-version }}
+          path: dist/SpotifyDownloader/
+          retention-days: 30

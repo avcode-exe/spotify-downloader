@@ -9,6 +9,11 @@ dist/
 build/
 *.whl
 
+# Build outputs
+*.spec
+*.exe
+installer/
+
 # Virtual environments
 venv/
 .venv/

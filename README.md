@@ -8,12 +8,13 @@ YouTube Music (via [spotDL](https://github.com/spotDL/spotify-downloader)).
 ## Features
 
 - **Terminal UI** — Rich, interactive interface built with [Textual](https://textual.textualize.io/)
+- **Modern GUI (optional)** — Lightweight desktop app built with [CustomTkinter](https://github.com/TomSchimansky/CustomTkinter) (Windows/macOS/Linux)
 - **Playlist Downloads** — Paste any public Spotify playlist URL and download all tracks
 - **Fresh Download Mode** — Overwrite existing files for a clean re-download
 - **Retry Failed** — Automatically retry tracks that failed to download
 - **Download History** — View your past download sessions with status and timestamps
 - **Progress Tracking** — Real-time progress bar, tracks/min rate, and ETA
-- **Duplicate Detection** — Skipped (already downloaded) tracks count toward progress for consistency
+- **Duplicate Detection** — Skipped (already-downloaded) tracks count toward progress for consistency
 - **Settings Panel** — Configure format, bitrate, proxy, and cookie file without leaving the app
 - **Auto-Extract Cookies** — One-click cookie extraction with smart multi-browser fallback (tries Firefox first on Windows to avoid locked databases)
 - **Cookie File Warnings** — Detects missing/expired cookies and YouTube rate-limiting, with actionable guidance
@@ -26,10 +27,64 @@ YouTube Music (via [spotDL](https://github.com/spotDL/spotify-downloader)).
 - **Python 3.10+**
 - **FFmpeg** — handles audio conversion (spotDL can auto-install it)
 - **yt-dlp** — for audio sourcing and cookie extraction (installed with spotDL)
+- **TUI (optional):** `textual`
+- **GUI (optional):** `customtkinter`
 
 ---
 
-## Installation
+## Installation Options
+
+You can install and run this project in three ways:
+1. **GUI app** — desktop app (recommended for Windows)
+2. **TUI from source** — terminal UI from source
+3. **Windows EXE** — classic installer or portable EXE
+
+---
+
+## Option 1: GUI App (Recommended for Windows)
+
+### Prerequisites
+
+- Python 3.10 or later
+- FFmpeg (spotDL can auto-install it)
+
+### Install and run
+
+```powershell
+# 1. Install GUI dependencies
+pip install -r requirements.txt
+
+# 2. (Optional) Ensure FFmpeg is available
+spotdl --download-ffmpeg
+
+# 3. Launch the GUI
+python gui_app.py
+```
+
+### GUI Features
+
+- **Playlist URL input** — paste any public Spotify playlist URL
+- **Output folder** — choose where to save downloads
+- **Download / Fresh / Retry Failed** — full download control
+- **Preview** — scan local folder and see duplicate groups
+- **Duplicates** — review and safely move duplicate copies
+- **Settings** — configure format, bitrate, audio source, proxy, and cookie file
+- **History** — view past download sessions
+- **Live log** — real-time download progress and status
+
+### Uninstall GUI dependencies
+
+If you no longer need the GUI, uninstall its packages:
+
+```powershell
+pip uninstall customtkinter
+```
+
+The TUI remains available and can be launched with `python spotify_downloader.py`.
+
+---
+
+## Option 2: TUI from Source
 
 ### Windows
 
@@ -159,28 +214,111 @@ python spotify_downloader.py
 
 ---
 
+## Option 3: Windows EXE / Installer
+
+### Build from source
+
+**Prerequisites:**
+- Python 3.10+
+- Windows OS
+- Inno Setup 6+ (bundled at `C:\Program\ISCC.exe` for local builds)
+
+**Steps:**
+
+```powershell
+# 1. Install dependencies
+pip install -r requirements.txt
+
+# 2. Build portable EXE + official installer in one step
+.\build.ps1
+
+# Outputs:
+#   dist\SpotifyDownloader\SpotifyDownloader.exe   (portable)
+#   installer\SpotifyDownloader_Setup.exe          (official installer)
+```
+
+To skip the installer and only build the portable EXE:
+```powershell
+.\build.ps1 -SkipInstaller
+```
+
+To clean build artifacts without building:
+```powershell
+.\build.ps1 -Clean
+```
+
+### Inno Setup installer
+
+`installer.iss` creates a modern `Setup.exe` with:
+- Start Menu shortcut
+- Optional Desktop shortcut
+- Installs `gui_app.py`, `spotify_downloader.py`, `src/`, and `requirements.txt` under `%LOCALAPPDATA%\Spotify Downloader\`
+
+---
+
+## GitHub Actions (Auto-Build)
+
+The repo includes `.github/workflows/build-exe.yml`. On every push/PR:
+- Builds the GUI EXE on `windows-latest`
+- Matrix: Python 3.11 and 3.12
+- Uploads `dist/SpotifyDownloader/` as a workflow artifact (retained 30 days)
+
+To download the artifact:
+1. Go to the **Actions** tab in GitHub
+2. Select the latest **Build Windows EXE** run
+3. Download the `SpotifyDownloader-win-<version>` artifact
+
+---
+
 ## Usage
 
-1. Paste a **public** Spotify playlist URL into the top field
+### TUI (Terminal UI)
+
+1. Run `python spotify_downloader.py`
+2. Paste a **public** Spotify playlist URL into the top field
    - Example: `https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M`
-2. Choose an output folder (default: `./downloads`)
-3. Click **Download** (or **⟳ Fresh** to overwrite existing files)
-4. Watch the progress — spotDL will fetch metadata, find matching audio on
+3. Choose an output folder (default: `./downloads`)
+4. Click **Download** (or **⟳ Fresh** to overwrite existing files)
+5. Watch the progress — spotDL will fetch metadata, find matching audio on
    YouTube Music, download it, and embed ID3 tags (title, artist, cover art)
 
+### GUI (Desktop App)
+
+1. Run `python gui_app.py`
+2. Paste a **public** Spotify playlist URL into the top field
+   - Example: `https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M`
+3. Choose an output folder (default: `./downloads`)
+4. Click **▶ Download** or **⟳ Fresh** to start
+5. Use **🔎 Preview** and **📋 Duplicates** buttons to toggle panels
+6. Watch the progress in the status bar and live log at the bottom
+
 ## Buttons
+
+### TUI Buttons
 
 | Button | Description |
 |--------|-------------|
 | ▶ **Download** | Download the playlist (skips already-downloaded tracks) |
 | 🔄 **Retry Failed** | Re-download only the tracks that failed in the last session |
 | ⟳ **Fresh** | Download everything, overwriting existing files |
-| 📜 **History** | Toggle the download history panel |
-| ⚙ **Settings** | Toggle the settings panel (format, bitrate, proxy, cookies) |
+| ⏹ **Cancel** | Cancel the current download |
+| ✕ **Quit** | Exit the application |
+
+### GUI Buttons
+
+| Button | Description |
+|--------|-------------|
+| ▶ **Download** | Download the playlist (skips already-downloaded tracks) |
+| 🔄 **Retry Failed** | Re-download only the tracks that failed in the last session |
+| ⟳ **Fresh** | Download everything, overwriting existing files |
+| 🔎 **Preview** | Toggle the preview panel (shows local files and duplicates) |
+| 📋 **Duplicates** | Toggle the duplicates panel (shows duplicate groups) |
 | ⏹ **Cancel** | Cancel the current download |
 | ✕ **Quit** | Exit the application |
 
 ## Settings
+
+### TUI Settings (⚙ Settings panel)
 
 Open the **⚙ Settings** panel to configure:
 
@@ -196,7 +334,166 @@ Open the **⚙ Settings** panel to configure:
 
 All settings are saved to `~/.spotdl/settings.json` and restored on restart.
 
-## Reducing Rate Limiting
+### GUI Settings
+
+The GUI **Settings** panel provides the same options in a desktop-friendly layout:
+
+| Setting | Description |
+|---------|-------------|
+| **Format** | Output format: MP3, M4A, FLAC, Opus, OGG, WAV |
+| **Bitrate** | Audio bitrate: Auto, 64k–320k, or disable |
+| **Audio source** | YouTube Music, YouTube, SoundCloud, Bandcamp, Piped |
+| **Duplicate policy** | Skip or metadata-based duplicate handling |
+| **Proxy** | HTTP/SOCKS5 proxy URL |
+| **Cookie file** | Path to a `cookies.txt` file |
+
+All settings are saved to `~/.spotdl/settings.json` and restored on restart.
+
+## Building the Windows EXE
+
+### Prerequisites
+
+- Windows OS
+- Python 3.10+
+- Inno Setup 6+ (bundled at `C:\Program\ISCC.exe` for local builds)
+
+### Build Steps
+
+```powershell
+# 1. Install build dependencies
+pip install pyinstaller
+
+# 2. Run the build script (PowerShell)
+.\build.ps1
+
+# Outputs:
+#   dist\SpotifyDownloader\SpotifyDownloader.exe   (portable)
+#   installer\SpotifyDownloader_Setup.exe          (official installer)
+```
+
+To skip the installer and only build the portable EXE:
+```powershell
+.\build.ps1 -SkipInstaller
+```
+
+### Installer Features
+
+`installer.iss` creates a modern `Setup.exe` with:
+- Start Menu shortcut
+- Optional Desktop shortcut
+- Installs `gui_app.py`, `spotify_downloader.py`, `src/`, and `requirements.txt` under `%LOCALAPPDATA%\Spotify Downloader\`
+
+### GitHub Actions (Auto-Build)
+
+The repo includes `.github/workflows/build-exe.yml`. On every push/PR:
+- Builds the GUI EXE on `windows-latest`
+- Matrix: Python 3.11 and 3.12
+- Uploads `dist/SpotifyDownloader/` as a workflow artifact (retained 30 days)
+
+To download the artifact:
+1. Go to the **Actions** tab in GitHub
+2. Select the latest **Build Windows EXE** run
+3. Download the `SpotifyDownloader-win-<version>` artifact
+
+## Troubleshooting
+
+### Common Issues
+
+| Issue | Solution |
+|-------|----------|
+| **"spotDL not found"** | Run `pip install spotdl` or follow the Installation section above |
+| **"FFmpeg not found"** | Run `spotdl --download-ffmpeg` (auto-installs) or install via your package manager |
+| **"Permission denied" (Linux/macOS)** | Use `pip install --user -r requirements.txt` or a virtual environment |
+| **Cookie extraction fails** | See "Reducing Rate Limiting" section above for browser-specific fixes |
+| **"Could not copy Chrome cookie database"** | Close all Chrome/Edge windows, or switch to Firefox in Settings |
+| **Downloads are slow** | YouTube may be rate-limiting you — extract cookies or use a proxy |
+| **"No such file or directory" for cookies** | Check the path in Settings — use the full absolute path |
+
+### Linux-Specific Issues
+
+```bash
+# If you get "externally-managed-environment" error (Ubuntu 23.04+):
+pip install --break-system-packages -r requirements.txt
+# OR use a virtual environment (recommended):
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+
+# If yt-dlp can't find Chrome cookies:
+export CHROMIUM_FLAGS="--password-store=basic"
+
+# If you get "tkinter" errors (rare):
+sudo apt install python3-tk   # Debian/Ubuntu
+sudo dnf install python3-tkinter   # Fedora
+```
+
+### macOS-Specific Issues
+
+```bash
+# If you get "SSL: CERTIFICATE_VERIFY_FAILED":
+/Applications/Python\ 3.x/Install\ Certificates.command
+
+# If pip isn't found:
+python3 -m pip install -r requirements.txt
+
+# If you get "Operation not permitted" errors:
+# Make sure you're running in Terminal, not a restricted environment
+```
+
+---
+
+## Notes
+
+- Only **public** playlists work (private playlists will fail).
+- Audio quality depends on what YouTube Music offers (typically 128–256 kbps).
+- Downloading copyrighted music may violate Spotify's ToS and local copyright laws in your country.
+- YouTube cookies expire periodically (every few weeks) — re-extract when downloads start failing.
+
+## Project Structure
+
+```
+spotify_downloader/
+├── build.ps1              # PowerShell build script for Windows EXE
+├── build.bat              # Batch build script for Windows EXE
+├── installer.iss          # Inno Setup script for classic Setup.exe
+├── generate_icon.py       # Helper script to create a default icon
+├── assets/
+│   └── icon.ico           # Default application icon
+├── gui_app.py             # Modern GUI entry point (CustomTkinter)
+├── spotify_downloader.py  # TUI entry point (Textual) + download logic
+├── src/
+│   ├── gui/               # GUI package
+│   │   ├── app.py         # Main GUI application
+│   │   ├── home_frame.py  # Playlist URL and download controls
+│   │   ├── settings_frame.py
+│   │   ├── preview_frame.py
+│   │   ├── duplicates_frame.py
+│   │   ├── history_frame.py
+│   │   ├── log_frame.py
+│   │   ├── workers.py     # Background spotDL execution
+│   │   ├── utils.py
+│   │   └── theme.py       # Shared theme (colors, fonts, buttons)
+│   ├── models.py          # Shared dataclasses and constants
+│   ├── manifest.py        # Local scan and duplicate grouping
+│   ├── duplicates.py      # Duplicate move/quarantine logic
+│   ├── state.py           # Per-track state persistence
+│   └── spotdl_tools.py    # spotDL command and dependency helpers
+├── requirements.txt       # Python dependencies
+├── README.md              # This file
+└── downloads/             # Default output directory
+```
+
+## Data Files
+
+The app stores data in `~/.spotdl/`:
+
+| File | Description |
+|------|-------------|
+| `settings.json` | Persisted settings (format, bitrate, audio provider, proxy, cookies, browser) |
+| `download_history.json` | Download session history (up to 100 entries) |
+| `track_state.json` | Per-track state for retry and duplicate handling |
+| `cookies.txt` | Auto-extracted browser cookies for YouTube authentication |
+| `app.log` | Application log file (rotated, 5MB max) |
 
 YouTube may block downloads from your IP if you hit it too hard. Here's how to reduce failures:
 
