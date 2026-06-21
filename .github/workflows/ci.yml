@@ -47,7 +47,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Compile check
-        run: python -m py_compile spotify_downloader.py gui_app.py installer.py src/manifest.py src/models.py src/spotdl_tools.py src/state.py src/duplicates.py src/gui/*.py
+        run: python -m py_compile spotify_downloader.py gui_app.py installer.py src/manifest.py src/models.py src/spotdl_tools.py src/state.py src/duplicates.py && python -m compileall -q src/gui
 
   validate:
     name: Validate on ${{ matrix.os }}
