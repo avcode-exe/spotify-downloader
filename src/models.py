@@ -72,7 +72,6 @@ class DuplicateGroup:
         keep = self.keep
         keep_name = keep.path.name if keep else "unknown"
         action = "move" if self.safe_to_move else "review"
-        label = "duplicate" if self.safe_to_move else "possible duplicate"
         lines = [f"[bold]{self.reason}[/] [dim]{self.key}[/]"]
         lines.append(f"  [green]keep[/] {keep_name}")
         for track in self.tracks:

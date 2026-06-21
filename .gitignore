@@ -41,3 +41,6 @@ downloads/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Kilo runtime/plan artifacts
+.kilo/

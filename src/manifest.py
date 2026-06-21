@@ -110,7 +110,9 @@ def group_duplicates(tracks: list[LocalTrack]) -> list[DuplicateGroup]:
                 track,
             )
         elif track.title:
-            _add_group(grouped, "possible metadata title", normalize_name(track.title), track)
+            _add_group(
+                grouped, "possible metadata title", normalize_name(track.title), track
+            )
 
     duplicate_groups: list[DuplicateGroup] = []
     for (reason, key), group_tracks in grouped.items():
@@ -124,12 +126,18 @@ def group_duplicates(tracks: list[LocalTrack]) -> list[DuplicateGroup]:
                 safe_to_move=reason in SAFE_MOVE_REASONS,
             )
         )
-    duplicate_groups.sort(key=lambda group: (not group.safe_to_move, group.reason, group.key.lower()))
+    duplicate_groups.sort(
+        key=lambda group: (not group.safe_to_move, group.reason, group.key.lower())
+    )
     return duplicate_groups
 
 
-def summarize_scan(tracks: list[LocalTrack], duplicate_groups: list[DuplicateGroup]) -> dict[str, int]:
-    safe_copy_paths = {track.path for group in duplicate_groups for track in group.copies}
+def summarize_scan(
+    tracks: list[LocalTrack], duplicate_groups: list[DuplicateGroup]
+) -> dict[str, int]:
+    safe_copy_paths = {
+        track.path for group in duplicate_groups for track in group.copies
+    }
     possible_copies = 0
     for group in duplicate_groups:
         if not group.safe_to_move and len(group.tracks) >= 2:
@@ -138,7 +146,9 @@ def summarize_scan(tracks: list[LocalTrack], duplicate_groups: list[DuplicateGro
         "files": len(tracks),
         "duplicate_groups": sum(1 for group in duplicate_groups if group.safe_to_move),
         "duplicate_copies": len(safe_copy_paths),
-        "possible_duplicate_groups": sum(1 for group in duplicate_groups if not group.safe_to_move),
+        "possible_duplicate_groups": sum(
+            1 for group in duplicate_groups if not group.safe_to_move
+        ),
         "possible_duplicate_copies": possible_copies,
         "unique_tracks": max(len(tracks) - len(safe_copy_paths), 0),
     }

@@ -26,7 +26,9 @@ async def validate_spotdl(spotdl_cmd: list[str]) -> bool:
         return await proc.wait() == 0
     except Exception as exc:
         log = logging.getLogger("spotify_downloader")
-        log.error("spotDL validation failed | cmd=%s error=%s", " ".join(spotdl_cmd), exc)
+        log.error(
+            "spotDL validation failed | cmd=%s error=%s", " ".join(spotdl_cmd), exc
+        )
         return False
 
 
@@ -53,7 +55,9 @@ async def ensure_deno(spotdl_cmd: list[str]) -> bool:
         )
         return True
     except Exception as exc:
-        logging.getLogger("spotify_downloader").error("Deno install exception | error=%s", exc)
+        logging.getLogger("spotify_downloader").error(
+            "Deno install exception | error=%s", exc
+        )
         return True
 
 

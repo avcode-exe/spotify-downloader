@@ -42,6 +42,8 @@ from src.spotdl_tools import (
     validate_spotdl,
 )
 from src.state import (
+    HISTORY_FILE,
+    SETTINGS_FILE,
     STATE_FILE,
     load_track_state,
     save_track_state,
@@ -51,8 +53,6 @@ from src.state import (
 )
 
 
-HISTORY_FILE = os.path.join(os.path.expanduser("~"), ".spotdl", "download_history.json")
-SETTINGS_FILE = os.path.join(os.path.expanduser("~"), ".spotdl", "settings.json")
 LOG_DIR = os.path.join(os.path.expanduser("~"), ".spotdl")
 LOG_FILE = os.path.join(LOG_DIR, "app.log")
 

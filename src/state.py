@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Any
 
 STATE_FILE = os.path.join(os.path.expanduser("~"), ".spotdl", "track_state.json")
+HISTORY_FILE = os.path.join(os.path.expanduser("~"), ".spotdl", "download_history.json")
+SETTINGS_FILE = os.path.join(os.path.expanduser("~"), ".spotdl", "settings.json")
 
 
 def _load_raw() -> list[dict[str, Any]]:
@@ -100,7 +102,10 @@ def summarize_track_state(state: list[dict[str, Any]]) -> dict[str, int]:
 
 def update_paths_from_scan(state: list[dict[str, Any]], tracks: list[Any]) -> None:
     for track in tracks:
-        key = getattr(track, "normalized_name", None) or Path(getattr(track, "filename", "")).stem.lower()
+        key = (
+            getattr(track, "normalized_name", None)
+            or Path(getattr(track, "filename", "")).stem.lower()
+        )
         upsert_track_state(
             state,
             key=str(key),
