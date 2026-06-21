@@ -18,6 +18,7 @@ import time
 import urllib.request
 from datetime import datetime, timezone
 from logging.handlers import RotatingFileHandler
+from typing import Any
 
 from textual import on
 from textual.app import App, ComposeResult
@@ -26,7 +27,12 @@ from textual.screen import ModalScreen
 from textual.widgets import Button, Input, Label, ProgressBar, RichLog, Select
 
 from src.duplicates import format_quarantine_summary, quarantine_duplicate_copies
-from src.manifest import group_duplicates, normalize_name, scan_output_folder, summarize_scan
+from src.manifest import (
+    group_duplicates,
+    normalize_name,
+    scan_output_folder,
+    summarize_scan,
+)
 from src.models import DUPLICATE_POLICY_OPTIONS, LocalTrack
 from src.spotdl_tools import (
     build_spotdl_args,
@@ -699,9 +705,7 @@ class SpotifyDownloader(App):
                             "▶  Download", id="download-btn", variant="success"
                         )
                         yield Button("⟳  Fresh", id="fresh-btn")
-                        yield Button(
-                            "🔄 Retry Failed", id="retry-btn", disabled=True
-                        )
+                        yield Button("🔄 Retry Failed", id="retry-btn", disabled=True)
                 with Container(classes="button-group"):
                     with Horizontal():
                         yield Button("🔎 Preview", id="preview-btn")
@@ -902,7 +906,9 @@ class SpotifyDownloader(App):
         if duplicate_policy not in dict(DUPLICATE_POLICY_OPTIONS):
             duplicate_policy = "skip"
         provider_label = audio_provider.replace("-", " ").title()
-        policy_label = dict(DUPLICATE_POLICY_OPTIONS).get(duplicate_policy, duplicate_policy)
+        policy_label = dict(DUPLICATE_POLICY_OPTIONS).get(
+            duplicate_policy, duplicate_policy
+        )
         parts = [
             f"Format: {fmt.upper()}",
             f"Bitrate: {bitrate}",
@@ -1042,7 +1048,9 @@ class SpotifyDownloader(App):
             log.error("yt-dlp not found for cookie extraction")
             return
         self.query_one("#extract-cookies-btn", Button).disabled = True
-        log.info("Extracting cookies | browser=%s output=%s", chosen_browser, cookie_path)
+        log.info(
+            "Extracting cookies | browser=%s output=%s", chosen_browser, cookie_path
+        )
         try:
             os.makedirs(cookie_dir, exist_ok=True)
             browsers_to_try: list[str]
@@ -1068,7 +1076,11 @@ class SpotifyDownloader(App):
                         cookie_path,
                     )
                 except Exception as exc:
-                    log.warning("Browser extraction exception | browser=%s error=%s", browser, exc)
+                    log.warning(
+                        "Browser extraction exception | browser=%s error=%s",
+                        browser,
+                        exc,
+                    )
                     last_output = str(exc)
                     continue
                 last_output = output
@@ -1081,10 +1093,17 @@ class SpotifyDownloader(App):
                         f"[bold green]✓[/] Cookies extracted from "
                         f"[bold]{browser.title()}[/] → [bold]{cookie_path}[/]"
                     )
-                    log.info("Cookie extraction successful | browser=%s path=%s", browser, cookie_path)
+                    log.info(
+                        "Cookie extraction successful | browser=%s path=%s",
+                        browser,
+                        cookie_path,
+                    )
                     return
                 output_lower = output.lower() if output else ""
-                is_locked = "could not copy" in output_lower or "permission denied" in output_lower
+                is_locked = (
+                    "could not copy" in output_lower
+                    or "permission denied" in output_lower
+                )
                 log.debug(
                     "Browser extraction failed | browser=%s locked=%s output=%s",
                     browser,
@@ -1107,7 +1126,9 @@ class SpotifyDownloader(App):
         output: str,
     ) -> None:
         output_lower = output.lower() if output else ""
-        is_locked = "could not copy" in output_lower or "permission denied" in output_lower
+        is_locked = (
+            "could not copy" in output_lower or "permission denied" in output_lower
+        )
         if is_locked:
             tried_names = ", ".join(b.title() for b in browsers_tried)
             self._log(
@@ -1120,8 +1141,14 @@ class SpotifyDownloader(App):
                 "      Export → save as cookies.txt → paste path in Cookie file field"
             )
         else:
-            self._log(f"[bold red]✗[/] Cookie extraction failed.\n   [dim]{output[:200] if output else 'No output'}[/]")
-        log.error("Cookie extraction failed | browsers=%s output=%s", browsers_tried, output[:200])
+            self._log(
+                f"[bold red]✗[/] Cookie extraction failed.\n   [dim]{output[:200] if output else 'No output'}[/]"
+            )
+        log.error(
+            "Cookie extraction failed | browsers=%s output=%s",
+            browsers_tried,
+            output[:200],
+        )
 
     _CHECKED_PACKAGES: list[tuple[str, str]] = [
         ("spotdl", "spotdl"),
@@ -1142,7 +1169,9 @@ class SpotifyDownloader(App):
         try:
             req = urllib.request.Request(url, headers={"Accept": "application/json"})
             loop = asyncio.get_running_loop()
-            resp = await loop.run_in_executor(None, lambda: urllib.request.urlopen(req, timeout=8))
+            resp = await loop.run_in_executor(
+                None, lambda: urllib.request.urlopen(req, timeout=8)
+            )
             data = json.loads(resp.read().decode())
             return data["info"]["version"]
         except Exception as exc:
@@ -1168,7 +1197,12 @@ class SpotifyDownloader(App):
             latest = await self._get_latest_version(pkg_name)
             if latest and self._version_gt(latest, installed):
                 updates.append(f"{display_name} {installed} → {latest}")
-                log.info("Update available | package=%s installed=%s latest=%s", pkg_name, installed, latest)
+                log.info(
+                    "Update available | package=%s installed=%s latest=%s",
+                    pkg_name,
+                    installed,
+                    latest,
+                )
         if updates:
             pkgs = " ".join(pkg for _, pkg in self._CHECKED_PACKAGES)
             self._log(
@@ -1204,7 +1238,9 @@ class SpotifyDownloader(App):
                 with open(HISTORY_FILE, "r", encoding="utf-8") as f:
                     data = json.load(f)
                 if isinstance(data, list):
-                    log.info("History loaded | entries=%d file=%s", len(data), HISTORY_FILE)
+                    log.info(
+                        "History loaded | entries=%d file=%s", len(data), HISTORY_FILE
+                    )
                     return data
                 log.warning("History file has unexpected format, ignoring")
         except (json.JSONDecodeError, OSError) as exc:
@@ -1216,7 +1252,9 @@ class SpotifyDownloader(App):
             os.makedirs(os.path.dirname(HISTORY_FILE), exist_ok=True)
             with open(HISTORY_FILE, "w", encoding="utf-8") as f:
                 json.dump(self._history, f, indent=2, ensure_ascii=False)
-            log.debug("History saved | entries=%d file=%s", len(self._history), HISTORY_FILE)
+            log.debug(
+                "History saved | entries=%d file=%s", len(self._history), HISTORY_FILE
+            )
         except OSError as exc:
             log.error("Could not save history | error=%s", exc)
             self._log(f"[bold red]✗[/] Could not save history: {exc}")
@@ -1296,7 +1334,9 @@ class SpotifyDownloader(App):
         spotdl_home = os.path.join(os.path.expanduser("~"), ".spotdl")
         for name in ("deno", "deno.exe"):
             if os.path.isfile(os.path.join(spotdl_home, name)):
-                log.debug("Deno found bundled | path=%s", os.path.join(spotdl_home, name))
+                log.debug(
+                    "Deno found bundled | path=%s", os.path.join(spotdl_home, name)
+                )
                 return True
         log.info("Deno not found — attempting install via spotDL")
         self._log("[bold yellow]⟳[/] Deno not found — installing for YouTube support …")
@@ -1313,7 +1353,9 @@ class SpotifyDownloader(App):
                 log.info("Deno installed successfully | output=%s", output)
                 self._log("[bold green]✓[/] Deno installed successfully")
                 return True
-            log.error("Deno install failed | exit_code=%d output=%s", proc.returncode, output)
+            log.error(
+                "Deno install failed | exit_code=%d output=%s", proc.returncode, output
+            )
             self._log(
                 "[bold red]✗[/] Could not install Deno. Some downloads may fail.\n"
                 "  Install manually: [bold cyan]spotdl --download-deno[/]"
@@ -1374,7 +1416,9 @@ class SpotifyDownloader(App):
             extra_args=extra_args,
         )
 
-    def _record_completed_track(self, track_name: str, output_folder: str, status: str) -> None:
+    def _record_completed_track(
+        self, track_name: str, output_folder: str, status: str
+    ) -> None:
         key = normalize_name(track_name)
         upsert_track_state(
             self._track_state,
@@ -1384,7 +1428,9 @@ class SpotifyDownloader(App):
             source="spotdl-output",
         )
         try:
-            matches = [track for track in self._last_scan if track.normalized_name == key]
+            matches = [
+                track for track in self._last_scan if track.normalized_name == key
+            ]
             if matches:
                 upsert_track_state(
                     self._track_state,
@@ -1399,7 +1445,9 @@ class SpotifyDownloader(App):
             pass
 
     def _record_failed_track(self, text: str, output_folder: str) -> None:
-        track_url_m = re.search(r"(https?://open\.spotify\.com/track/[A-Za-z0-9]+)", text)
+        track_url_m = re.search(
+            r"(https?://open\.spotify\.com/track/[A-Za-z0-9]+)", text
+        )
         if track_url_m:
             track_url = track_url_m.group(1)
             if track_url not in self._failed_tracks:
@@ -1439,8 +1487,12 @@ class SpotifyDownloader(App):
     ) -> None:
         downloading_re = re.compile(r"Downloading\s+(.+)", re.IGNORECASE)
         done_re = re.compile(r"(?:Downloaded|✓)\s+(.+)", re.IGNORECASE)
-        skipped_re = re.compile(r"Skipping\s+(.+)\s+as it is already downloaded", re.IGNORECASE)
-        error_re = re.compile(r"(?:AudioProviderError|Failed to download)", re.IGNORECASE)
+        skipped_re = re.compile(
+            r"Skipping\s+(.+)\s+as it is already downloaded", re.IGNORECASE
+        )
+        error_re = re.compile(
+            r"(?:AudioProviderError|Failed to download)", re.IGNORECASE
+        )
         found_re = re.compile(r"Found\s+(\d+)\s+songs", re.IGNORECASE)
 
         downloaded = 0
@@ -1491,9 +1543,16 @@ class SpotifyDownloader(App):
                         pending_done = True
                         self._track_timestamps.append(time.monotonic())
                         self._track_label.update(track_name)
-                        self._record_completed_track(track_name, output_folder, "skipped")
+                        self._record_completed_track(
+                            track_name, output_folder, "skipped"
+                        )
                         self._log(f"[dim]⏭  Skipped (duplicate): {track_name}[/]")
-                        log.info("Track skipped (duplicate) | track=%s skipped=%d total=%d", track_name, skipped, total)
+                        log.info(
+                            "Track skipped (duplicate) | track=%s skipped=%d total=%d",
+                            track_name,
+                            skipped,
+                            total,
+                        )
                         continue
                     m = done_re.search(text)
                     if m:
@@ -1506,15 +1565,26 @@ class SpotifyDownloader(App):
                         pending_done = True
                         self._track_timestamps.append(time.monotonic())
                         self._track_label.update(track_name)
-                        self._record_completed_track(track_name, output_folder, "downloaded")
-                        log.info("Track downloaded | track=%s downloaded=%d total=%d", track_name, downloaded, total)
+                        self._record_completed_track(
+                            track_name, output_folder, "downloaded"
+                        )
+                        log.info(
+                            "Track downloaded | track=%s downloaded=%d total=%d",
+                            track_name,
+                            downloaded,
+                            total,
+                        )
                         continue
                     if pending_done:
                         pending_done = False
-                        status_text = self._format_download_status(downloaded + skipped, total)
+                        status_text = self._format_download_status(
+                            downloaded + skipped, total
+                        )
                         self._status_label.update(status_text)
                         if total > 0:
-                            self._progress_bar.progress = min(downloaded + skipped, total)
+                            self._progress_bar.progress = min(
+                                downloaded + skipped, total
+                            )
                     m = found_re.search(text)
                     if m:
                         self._in_traceback = False
@@ -1527,7 +1597,12 @@ class SpotifyDownloader(App):
                         log.debug("Traceback block started | line=%s", text)
                         continue
                     if self._in_traceback:
-                        if downloading_re.search(text) or done_re.search(text) or found_re.search(text) or error_re.search(text):
+                        if (
+                            downloading_re.search(text)
+                            or done_re.search(text)
+                            or found_re.search(text)
+                            or error_re.search(text)
+                        ):
                             self._in_traceback = False
                         else:
                             continue
@@ -1537,13 +1612,19 @@ class SpotifyDownloader(App):
                         failed += 1
                         self._record_failed_track(text, output_folder)
                         self._log(f"[bold red]✗ {text}[/]")
-                        if not self._rate_limit_hint_shown and is_rate_limit_error(text):
+                        if not self._rate_limit_hint_shown and is_rate_limit_error(
+                            text
+                        ):
                             self._rate_limit_hint_shown = True
                             self._log(
                                 "   [dim]This may be YouTube rate limiting. "
                                 "Try setting a cookie file in Settings to reduce failures.[/]"
                             )
-                        log.warning("Download error | track_info=%s failed_count=%d", text, failed)
+                        log.warning(
+                            "Download error | track_info=%s failed_count=%d",
+                            text,
+                            failed,
+                        )
                         continue
                     text_lower = text.lower()
                     if "error" in text_lower or "fail" in text_lower:
@@ -1570,7 +1651,9 @@ class SpotifyDownloader(App):
                 elapsed_final,
             )
             if rc == 0:
-                self._status_label.update(f"Complete! ({self._format_elapsed(elapsed_final)})")
+                self._status_label.update(
+                    f"Complete! ({self._format_elapsed(elapsed_final)})"
+                )
                 self._track_label.update("—")
                 if total > 0:
                     self._progress_bar.progress = total
@@ -1597,26 +1680,53 @@ class SpotifyDownloader(App):
                         "Try updating: "
                         "[bold cyan]pip install -U spotdl yt-dlp[/][/]"
                     )
-                log.info("Download session complete | downloaded=%d skipped=%d failed=%d output=%s", downloaded, skipped, failed, output_path)
+                log.info(
+                    "Download session complete | downloaded=%d skipped=%d failed=%d output=%s",
+                    downloaded,
+                    skipped,
+                    failed,
+                    output_path,
+                )
                 if url:
-                    self._append_history(url, output_folder, downloaded + skipped, "completed")
+                    self._append_history(
+                        url, output_folder, downloaded + skipped, "completed"
+                    )
                 if self._failed_tracks:
-                    self._log(f"   [dim]{len(self._failed_tracks)} track(s) failed. Press [bold orange1]Retry Failed[/] to try again.[/]")
+                    self._log(
+                        f"   [dim]{len(self._failed_tracks)} track(s) failed. Press [bold orange1]Retry Failed[/] to try again.[/]"
+                    )
             else:
                 self._status_label.update(f"Failed (exit {rc})")
                 self._log(f"\n[bold red]✗ spotDL exited with code {rc}[/]")
                 if failed > 0:
                     self._log(f"   [dim]{failed} track(s) failed to download[/]")
-                log.error("Download session failed | exit_code=%d downloaded=%d skipped=%d failed=%d", rc, downloaded, skipped, failed)
+                log.error(
+                    "Download session failed | exit_code=%d downloaded=%d skipped=%d failed=%d",
+                    rc,
+                    downloaded,
+                    skipped,
+                    failed,
+                )
                 if url:
-                    self._append_history(url, output_folder, downloaded + skipped, "failed")
+                    self._append_history(
+                        url, output_folder, downloaded + skipped, "failed"
+                    )
                 if self._failed_tracks:
-                    self._log(f"   [dim]{len(self._failed_tracks)} track(s) failed. Press [bold orange1]Retry Failed[/] to try again.[/]")
+                    self._log(
+                        f"   [dim]{len(self._failed_tracks)} track(s) failed. Press [bold orange1]Retry Failed[/] to try again.[/]"
+                    )
         except asyncio.CancelledError:
-            log.warning("Download cancelled | downloaded=%d skipped=%d failed=%d", downloaded, skipped, failed)
+            log.warning(
+                "Download cancelled | downloaded=%d skipped=%d failed=%d",
+                downloaded,
+                skipped,
+                failed,
+            )
             self._status_label.update("Cancelled")
             if url:
-                self._append_history(url, output_folder, downloaded + skipped, "cancelled")
+                self._append_history(
+                    url, output_folder, downloaded + skipped, "cancelled"
+                )
         except Exception as exc:
             log.error("Unexpected error in _run_spotdl | error=%s", exc, exc_info=True)
             self._status_label.update("Error")
@@ -1696,7 +1806,10 @@ class SpotifyDownloader(App):
         summary = self._refresh_preview()
         if not summary["duplicate_groups"]:
             self._log("[dim]No duplicate groups found.[/]")
-        self.push_screen(DuplicateManagerScreen(self._duplicate_groups), self._handle_duplicate_manager_result)
+        self.push_screen(
+            DuplicateManagerScreen(self._duplicate_groups),
+            self._handle_duplicate_manager_result,
+        )
 
     def _handle_duplicate_manager_result(self, result: object) -> None:
         if result == "move":
@@ -1707,7 +1820,9 @@ class SpotifyDownloader(App):
         self._last_scan = scan_output_folder(out)
         self._duplicate_groups = group_duplicates(self._last_scan)
         self._duplicate_groups = [
-            group for group in self._duplicate_groups if group.safe_to_move and group.copies
+            group
+            for group in self._duplicate_groups
+            if group.safe_to_move and group.copies
         ]
         if not self._duplicate_groups:
             self._log("[dim]No safe duplicate copies to move.[/]")
@@ -1736,7 +1851,9 @@ class SpotifyDownloader(App):
         now = time.monotonic()
         if now > self._confirm_clean_until:
             self._confirm_clean_until = now + 5
-            self._log("[bold yellow]Press [bold]Clean[/] again within 5 seconds to move duplicate copies to ./downloads/duplicates/.[/]")
+            self._log(
+                "[bold yellow]Press [bold]Clean[/] again within 5 seconds to move duplicate copies to ./downloads/duplicates/.[/]"
+            )
             return
         self._confirm_clean_until = 0.0
         self._move_duplicate_copies()
@@ -1832,11 +1949,15 @@ class SpotifyDownloader(App):
         self._status_label.update("Fresh download…")
         self._progress_bar.update(total=100, progress=0)
         self._log_widget.clear()
-        self._log(f"[bold yellow]⟳[/] Fresh download (overwriting existing): [bold]{url}[/]")
+        self._log(
+            f"[bold yellow]⟳[/] Fresh download (overwriting existing): [bold]{url}[/]"
+        )
         self._cancel_requested = False
         self._rate_limit_hint_shown = False
         self._check_cookie_file()
-        cmd = self._build_spotdl_args(spotdl_cmd, [url], out, overwrite="force", scan_for_songs=True)
+        cmd = self._build_spotdl_args(
+            spotdl_cmd, [url], out, overwrite="force", scan_for_songs=True
+        )
         log.info("Running spotDL (fresh) | cmd=%s url=%s", " ".join(cmd), url)
         await self._run_spotdl(cmd, url=url, output_folder=out)
         self._unlock_ui()
@@ -1886,15 +2007,26 @@ class SpotifyDownloader(App):
         self._status_label.update(f"Retrying {len(track_urls)} track(s)…")
         self._progress_bar.update(total=len(track_urls), progress=0)
         self._log_widget.clear()
-        self._log(f"[bold orange1]🔄[/] Retrying [bold]{len(track_urls)}[/] failed track(s)…")
+        self._log(
+            f"[bold orange1]🔄[/] Retrying [bold]{len(track_urls)}[/] failed track(s)…"
+        )
         self._cancel_requested = False
         self._rate_limit_hint_shown = False
         self._check_cookie_file()
-        cmd = self._build_spotdl_args(spotdl_cmd, track_urls, out, add_download_op=True, overwrite="skip", scan_for_songs=True)
+        cmd = self._build_spotdl_args(
+            spotdl_cmd,
+            track_urls,
+            out,
+            add_download_op=True,
+            overwrite="skip",
+            scan_for_songs=True,
+        )
         log.info("Running spotDL (retry) | cmd=%s", " ".join(cmd))
         await self._run_spotdl(cmd, url="", output_folder=out)
         self._unlock_ui()
-        log.info("Retry handler finished | remaining_failed=%d", len(self._failed_tracks))
+        log.info(
+            "Retry handler finished | remaining_failed=%d", len(self._failed_tracks)
+        )
 
     @on(Button.Pressed, "#quit-btn")
     def on_quit(self) -> None:
