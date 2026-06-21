@@ -235,3 +235,28 @@ class HomeFrame(ctk.CTkFrame):
             **button_kwargs("secondary"),
         )
         quit_btn.pack(side="right")
+
+    def _browse_output(self) -> None:
+        directory = ctk.filedialog.askdirectory(title="Select output folder")
+        if directory:
+            self.output_entry.delete(0, "end")
+            self.output_entry.insert(0, directory)
+
+    def _quit(self) -> None:
+        self.winfo_toplevel().quit()
+
+    def set_busy(self, busy: bool) -> None:
+        state = "disabled" if busy else "normal"
+        self.download_btn.configure(state=state)
+        self.fresh_btn.configure(state=state)
+        self.retry_btn.configure(state=state)
+        self.preview_btn.configure(state=state)
+        self.duplicates_btn.configure(state=state)
+        self.cancel_btn.configure(state="normal" if busy else "disabled")
+
+    def update_status(
+        self, status: str, track: str = "—", progress: float = 0.0
+    ) -> None:
+        self.status_var.set(status)
+        self.track_var.set(track)
+        self.progress.set(progress)

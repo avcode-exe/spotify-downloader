@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import customtkinter as ctk
 
+from src.models import DuplicateGroup
 
 from .theme import (
     FONT_LABEL,
@@ -42,3 +43,24 @@ class DuplicatesFrame(ctk.CTkFrame):
             corner_radius=6,
         )
         self._text.pack(fill="both", expand=True)
+
+    def render(self, duplicate_groups: list[DuplicateGroup]) -> None:
+        self._text.configure(state="normal")
+        self._text.delete("1.0", "end")
+
+        if not duplicate_groups:
+            self._text.insert("end", "No duplicate groups found. Run Preview first.\n")
+        else:
+            for group in duplicate_groups:
+                keep = group.keep
+                keep_name = keep.path.name if keep else "unknown"
+                action = "move" if group.safe_to_move else "review"
+                self._text.insert("end", f"{group.reason} {group.key}\n")
+                self._text.insert("end", f"  keep: {keep_name}\n")
+                for track in group.tracks:
+                    if track is keep:
+                        continue
+                    self._text.insert("end", f"  {action}: {track.path.name}\n")
+                self._text.insert("end", "\n")
+
+        self._text.configure(state="disabled")

@@ -42,3 +42,46 @@ class HistoryFrame(ctk.CTkFrame):
             corner_radius=6,
         )
         self._text.pack(fill="both", expand=True)
+
+    def render(self, history: list[dict], track_state_summary: dict[str, int]) -> None:
+        self._text.configure(state="normal")
+        self._text.delete("1.0", "end")
+
+        if not history:
+            self._text.insert("end", "No downloads yet.\n")
+        else:
+            for entry in history:
+                ts = entry.get("timestamp", "")
+                try:
+                    from datetime import datetime
+
+                    dt = datetime.fromisoformat(ts)
+                    time_str = dt.strftime("%Y-%m-%d %H:%M")
+                except (ValueError, TypeError):
+                    time_str = ts[:16] if ts else "unknown"
+
+                url = entry.get("url", "")
+                short_url = url.split("?")[0] if url else "(unknown)"
+                if len(short_url) > 60:
+                    short_url = short_url[:57] + "…"
+
+                tracks = entry.get("tracks_downloaded", 0)
+                status = entry.get("status", "unknown")
+                folder = entry.get("output_folder", "")
+
+                self._text.insert(
+                    "end", f"{time_str}  {status}  {tracks} track(s)  {short_url}\n"
+                )
+                if folder:
+                    self._text.insert("end", f"  → {folder}\n")
+            self._text.insert("end", "\n")
+
+        self._text.insert(
+            "end",
+            "Track state:\n"
+            f"  downloaded: {track_state_summary.get('downloaded', 0)}\n"
+            f"  skipped: {track_state_summary.get('skipped', 0)}\n"
+            f"  failed: {track_state_summary.get('failed', 0)}\n"
+            f"  quarantined: {track_state_summary.get('quarantined', 0)}\n",
+        )
+        self._text.configure(state="disabled")

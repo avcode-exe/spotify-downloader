@@ -40,3 +40,9 @@ class LogFrame(ctk.CTkFrame):
             corner_radius=6,
         )
         self._text.pack(fill="both", expand=True)
+
+    def write(self, message: str) -> None:
+        self._text.configure(state="normal")
+        self._text.insert("end", message + "\n")
+        self._text.see("end")
+        self._text.configure(state="disabled")
