@@ -8,6 +8,18 @@ import customtkinter as ctk
 from src.models import DUPLICATE_POLICY_OPTIONS
 from src.state import STATE_FILE
 
+from .theme import (
+    FONT_BUTTON,
+    FONT_LABEL,
+    FONT_SECTION,
+    SPOTIFY_BORDER_COLOR,
+    SPOTIFY_DARK_GRAY,
+    SPOTIFY_GREEN,
+    SPOTIFY_LIGHT_GRAY,
+    SPOTIFY_WHITE,
+    frame_kwargs,
+)
+
 
 class SettingsFrame(ctk.CTkFrame):
     def __init__(
@@ -16,7 +28,7 @@ class SettingsFrame(ctk.CTkFrame):
         settings: dict[str, str],
         on_change: Callable[[dict[str, str]], None] | None = None,
     ) -> None:
-        super().__init__(master)
+        super().__init__(master, **frame_kwargs())
         self._settings = dict(settings)
         self._on_change = on_change
         self._loading = True
@@ -24,10 +36,16 @@ class SettingsFrame(ctk.CTkFrame):
         self._loading = False
 
     def _build_ui(self) -> None:
+        inner = ctk.CTkFrame(self, fg_color="transparent")
+        inner.pack(fill="both", expand=True, padx=16, pady=16)
+
         title = ctk.CTkLabel(
-            self, text="⚙ Settings", font=ctk.CTkFont(size=18, weight="bold")
+            inner,
+            text="⚙ Settings",
+            font=FONT_SECTION,
+            text_color=SPOTIFY_GREEN,
         )
-        title.grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 12))
+        title.pack(anchor="w", pady=(0, 16))
 
         self._format_var = ctk.StringVar(value=self._settings.get("format", "mp3"))
         self._bitrate_var = ctk.StringVar(value=self._settings.get("bitrate", "auto"))
@@ -63,53 +81,111 @@ class SettingsFrame(ctk.CTkFrame):
         ]
         policy_options = [option[1] for option in DUPLICATE_POLICY_OPTIONS]
 
-        self._add_select_row(1, "Format", self._format_var, format_options)
-        self._add_select_row(2, "Bitrate", self._bitrate_var, bitrate_options)
-        self._add_select_row(3, "Audio source", self._provider_var, provider_options)
-        self._add_select_row(4, "Duplicate policy", self._policy_var, policy_options)
-        self._add_entry_row(5, "Proxy", self._proxy_var)
-        self._add_entry_row(6, "Cookie file", self._cookie_file_var)
-
-        browse_btn = ctk.CTkButton(
-            self, text="Browse", width=100, command=self._browse_cookie_file
+        self._add_select_row(inner, "Format", self._format_var, format_options)
+        self._add_select_row(inner, "Bitrate", self._bitrate_var, bitrate_options)
+        self._add_select_row(
+            inner, "Audio source", self._provider_var, provider_options
         )
-        browse_btn.grid(row=6, column=2, padx=(8, 0), pady=6)
+        self._add_select_row(
+            inner, "Duplicate policy", self._policy_var, policy_options
+        )
+        self._add_entry_row(inner, "Proxy", self._proxy_var)
+        self._add_entry_row(inner, "Cookie file", self._cookie_file_var)
+
+        params = {
+            "fg_color": "transparent",
+            "hover_color": SPOTIFY_DARK_GRAY,
+            "text_color": SPOTIFY_WHITE,
+            "border_color": SPOTIFY_BORDER_COLOR,
+            "border_width": 1,
+            "font": FONT_BUTTON,
+            "height": 36,
+        }
+        browse_btn = ctk.CTkButton(
+            inner, text="Browse", command=self._browse_cookie_file, **params
+        )
+        browse_btn.pack(fill="x", pady=(0, 12))
 
         status = self._status_text()
         self._status_var = ctk.StringVar(value=status)
         status_label = ctk.CTkLabel(
-            self, textvariable=self._status_var, text_color="gray"
+            inner,
+            textvariable=self._status_var,
+            font=FONT_LABEL,
+            text_color=SPOTIFY_LIGHT_GRAY,
+            wraplength=380,
+            anchor="w",
+            justify="left",
         )
-        status_label.grid(row=7, column=0, columnspan=3, sticky="w", pady=(8, 0))
+        status_label.pack(fill="x", pady=(16, 10))
 
         state_label = ctk.CTkLabel(
-            self,
+            inner,
             text=f"State: {STATE_FILE}",
-            text_color="gray",
-            font=ctk.CTkFont(size=11),
+            font=("Segoe UI", 10),
+            text_color="#777777",
+            anchor="w",
+            wraplength=380,
+            justify="left",
         )
-        state_label.grid(row=8, column=0, columnspan=3, sticky="w", pady=(4, 0))
-
-        self.columnconfigure(0, weight=0)
-        self.columnconfigure(1, weight=1)
+        state_label.pack(fill="x", pady=(0, 0))
 
     def _add_select_row(
-        self, row: int, label: str, variable: ctk.StringVar, options: list[str]
+        self,
+        parent: ctk.CTkFrame,
+        label: str,
+        variable: ctk.StringVar,
+        options: list[str],
     ) -> None:
-        label_widget = ctk.CTkLabel(self, text=label)
-        label_widget.grid(row=row, column=0, sticky="w", padx=(0, 12), pady=6)
+        row = ctk.CTkFrame(parent, fg_color="transparent")
+        row.pack(fill="x", pady=(0, 10))
+
+        label_widget = ctk.CTkLabel(
+            row,
+            text=label,
+            font=FONT_LABEL,
+            text_color=SPOTIFY_WHITE,
+            width=90,
+            anchor="w",
+        )
+        label_widget.pack(side="left", padx=(0, 12))
 
         option = ctk.CTkOptionMenu(
-            self, variable=variable, values=options, command=self._on_setting_changed
+            row,
+            variable=variable,
+            values=options,
+            command=self._on_setting_changed,
+            height=36,
+            corner_radius=6,
+            font=FONT_BUTTON,
+            dropdown_font=FONT_BUTTON,
         )
-        option.grid(row=row, column=1, sticky="ew", pady=6)
+        option.pack(side="left", fill="x", expand=True)
 
-    def _add_entry_row(self, row: int, label: str, variable: ctk.StringVar) -> None:
-        label_widget = ctk.CTkLabel(self, text=label)
-        label_widget.grid(row=row, column=0, sticky="w", padx=(0, 12), pady=6)
+    def _add_entry_row(
+        self, parent: ctk.CTkFrame, label: str, variable: ctk.StringVar
+    ) -> None:
+        row = ctk.CTkFrame(parent, fg_color="transparent")
+        row.pack(fill="x", pady=(0, 10))
 
-        entry = ctk.CTkEntry(self, textvariable=variable)
-        entry.grid(row=row, column=1, sticky="ew", pady=6)
+        label_widget = ctk.CTkLabel(
+            row,
+            text=label,
+            font=FONT_LABEL,
+            text_color=SPOTIFY_WHITE,
+            width=90,
+            anchor="w",
+        )
+        label_widget.pack(side="left", padx=(0, 12))
+
+        entry = ctk.CTkEntry(
+            row,
+            textvariable=variable,
+            height=36,
+            corner_radius=6,
+            font=FONT_BUTTON,
+        )
+        entry.pack(side="left", fill="x", expand=True)
         entry.bind("<Return>", lambda _event: self._on_setting_changed(variable.get()))
 
     def _browse_cookie_file(self) -> None:

@@ -2,37 +2,41 @@ from __future__ import annotations
 
 import customtkinter as ctk
 
-from .utils import strip_ansi
+from .theme import (
+    FONT_SECTION,
+    SPOTIFY_BORDER_COLOR,
+    SPOTIFY_DARK_GRAY,
+    SPOTIFY_WHITE,
+    frame_kwargs,
+)
 
 
 class LogFrame(ctk.CTkFrame):
     def __init__(self, master: ctk.CTk) -> None:
-        super().__init__(master)
+        super().__init__(master, **frame_kwargs())
         self._build_ui()
 
     def _build_ui(self) -> None:
+        inner = ctk.CTkFrame(self, fg_color="transparent")
+        inner.pack(fill="both", expand=True, padx=16, pady=16)
+
         header = ctk.CTkLabel(
-            self, text="📜 Log", font=ctk.CTkFont(size=18, weight="bold")
+            inner,
+            text="📜 Log",
+            font=FONT_SECTION,
+            text_color=SPOTIFY_WHITE,
         )
-        header.pack(anchor="w", padx=12, pady=(12, 6))
+        header.pack(anchor="w", pady=(0, 12))
 
-        self._text = ctk.CTkTextbox(self, state="disabled", wrap="word")
-        self._text.pack(fill="both", expand=True, padx=12, pady=(0, 12))
-
-        buttons = ctk.CTkFrame(self, fg_color="transparent")
-        buttons.pack(fill="x", padx=12, pady=(0, 12))
-
-        clear_btn = ctk.CTkButton(buttons, text="Clear", width=100, command=self.clear)
-        clear_btn.pack(side="right")
-
-    def write(self, message: str) -> None:
-        clean = strip_ansi(message)
-        self._text.configure(state="normal")
-        self._text.insert("end", clean + "\n")
-        self._text.see("end")
-        self._text.configure(state="disabled")
-
-    def clear(self) -> None:
-        self._text.configure(state="normal")
-        self._text.delete("1.0", "end")
-        self._text.configure(state="disabled")
+        self._text = ctk.CTkTextbox(
+            inner,
+            state="disabled",
+            wrap="word",
+            font=("Consolas", 10),
+            text_color=SPOTIFY_WHITE,
+            fg_color=SPOTIFY_DARK_GRAY,
+            border_width=1,
+            border_color=SPOTIFY_BORDER_COLOR,
+            corner_radius=6,
+        )
+        self._text.pack(fill="both", expand=True)

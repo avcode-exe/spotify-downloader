@@ -49,9 +49,9 @@ def summarize_local_scan(
 ) -> dict[str, int]:
     from src.manifest import summarize_scan
 
-    summary = summarize_scan(tracks, duplicate_groups)
+    scan_summary = summarize_scan(tracks, duplicate_groups)
     state_summary = summarize_track_state([])
-    return {**summary, **state_summary}
+    return {**scan_summary, **state_summary}
 
 
 def format_track_line(track: LocalTrack) -> str:
