@@ -12,7 +12,8 @@ build/
 # Build outputs
 *.spec
 *.exe
-installer/
+installer/*.exe
+installer/*_files/
 
 # Virtual environments
 venv/
