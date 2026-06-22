@@ -39,7 +39,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 Name: "quicklaunchicon"; Description: "{cm:CreateQuickLaunchIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked; OnlyBelowVersion: 6.1; Check: not IsAdminInstallMode
-Name: "tui"; Description: "Install command-line TUI (Terminal UI) launcher"; GroupDescription: "Additional components"; Flags: unchecked
+Name: "tui"; Description: "Install command-line TUI (Terminal UI) launcher and add spotify-downloader-tui to PATH"; GroupDescription: "Additional components"; Flags: unchecked
 
 [Files]
 Source: "dist\SpotifyDownloader\SpotifyDownloader.exe"; DestDir: "{app}"; Flags: ignoreversion
@@ -47,11 +47,11 @@ Source: "dist\SpotifyDownloader\*"; DestDir: "{app}"; Flags: ignoreversion recur
 Source: "requirements.txt"; DestDir: "{app}"; Flags: ignoreversion
 Source: "spotify_downloader.py"; DestDir: "{app}"; Flags: ignoreversion
 Source: "src\*"; DestDir: "{app}\src"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "installer\tui_launcher.bat"; DestDir: "{app}"; Flags: ignoreversion; Tasks: tui
+Source: "installer\spotify-downloader-tui.bat"; DestDir: "{app}"; Flags: ignoreversion; Tasks: tui
 
 [Icons]
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
-Name: "{autoprograms}\{#MyAppName} TUI"; Filename: "{app}\tui_launcher.bat"; Tasks: tui
+Name: "{autoprograms}\{#MyAppName} TUI"; Filename: "{app}\spotify-downloader-tui.bat"; Tasks: tui
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 Name: "{userappdata}\Microsoft\Internet Explorer\Quick Launch\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: quicklaunchicon
 
@@ -59,4 +59,30 @@ Name: "{userappdata}\Microsoft\Internet Explorer\Quick Launch\{#MyAppName}"; Fil
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}"; Flags: nowait postinstall skipifsilent
 
 [Code]
-// No custom code needed
+procedure AddAppToPath();
+var
+  ResultCode: Integer;
+  PsFile: string;
+  PsCmd: string;
+  AppPath: string;
+begin
+  AppPath := ExpandConstant('{app}');
+  PsFile := ExpandConstant('{tmp}\add_to_path.ps1');
+  PsCmd := Format('$p = [Environment]::GetEnvironmentVariable("Path", "User")' + #13#10 +
+    'if ($p -notlike "*%s*") {' + #13#10 +
+    '  [Environment]::SetEnvironmentVariable("Path", $p + ";%s", "User")' + #13#10 +
+    '}', [AppPath, AppPath]);
+  SaveStringToFile(PsFile, PsCmd, False);
+  Exec('powershell.exe', '-NoProfile -ExecutionPolicy Bypass -File "' + PsFile + '"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep = ssPostInstall then
+  begin
+    if WizardIsTaskSelected('tui') then
+    begin
+      AddAppToPath();
+    end;
+  end;
+end;
