@@ -4,7 +4,6 @@ import asyncio
 import logging
 import os
 import shutil
-import sys
 
 
 def find_spotdl() -> list[str] | None:
