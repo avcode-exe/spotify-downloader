@@ -8,6 +8,7 @@ Offers optional TUI dependency installation while keeping the GUI app as the def
 from __future__ import annotations
 
 import importlib.util
+import re
 import subprocess
 import sys
 
@@ -18,10 +19,8 @@ CORE_REQUIREMENTS = ["spotdl>=4.5.0", "mutagen>=1.45.0"]
 
 
 def _is_installed(package: str) -> bool:
-    return (
-        importlib.util.find_spec(package.split("==")[0].split(">=")[0].split("<")[0])
-        is not None
-    )
+    pkg_name = re.split(r"[<>=!~;\[]", package)[0]
+    return importlib.util.find_spec(pkg_name) is not None
 
 
 def _install_packages(packages: list[str]) -> int:

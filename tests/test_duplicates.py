@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Callable
 
 import pytest
 
@@ -15,7 +16,7 @@ def output_dir(tmp_path: Path) -> Path:
 
 
 @pytest.fixture()
-def track_factory(tmp_path: Path) -> callable:
+def track_factory(tmp_path: Path) -> Callable[..., LocalTrack]:
     def _factory(name: str, bitrate: int = 320, size: int = 1000, *, subdir: str = "") -> LocalTrack:
         base = tmp_path / subdir if subdir else tmp_path
         base.mkdir(parents=True, exist_ok=True)
@@ -60,7 +61,7 @@ class TestQuarantineDuplicateCopies:
         assert count == 0
         assert dest.parent == output_dir / "duplicates"
 
-    def test_unsafe_groups_skipped(self, output_dir: Path, track_factory: callable) -> None:
+    def test_unsafe_groups_skipped(self, output_dir: Path, track_factory: Callable[..., LocalTrack]) -> None:
         unsafe = DuplicateGroup(
             reason="possible metadata title/artist",
             key="song",
@@ -71,7 +72,7 @@ class TestQuarantineDuplicateCopies:
         assert count == 0
         assert not dest.exists()
 
-    def test_safe_groups_moved(self, output_dir: Path, track_factory: callable) -> None:
+    def test_safe_groups_moved(self, output_dir: Path, track_factory: Callable[..., LocalTrack]) -> None:
         t1 = track_factory("a", bitrate=320, size=5000)
         t2 = track_factory("a", bitrate=128, size=2000)
         group = DuplicateGroup(
@@ -86,7 +87,7 @@ class TestQuarantineDuplicateCopies:
         assert dest.parent == output_dir / "duplicates"
         assert not t2.path.exists()
 
-    def test_manifest_written(self, output_dir: Path, track_factory: callable) -> None:
+    def test_manifest_written(self, output_dir: Path, track_factory: Callable[..., LocalTrack]) -> None:
         t1 = track_factory("x", bitrate=320, size=5000)
         t2 = track_factory("x", bitrate=128, size=2000)
         group = DuplicateGroup(
@@ -103,7 +104,7 @@ class TestQuarantineDuplicateCopies:
         assert len(manifest["moved"]) == 1
         assert manifest["moved"][0]["normalized_name"] == "x"
 
-    def test_missing_source_file_skipped(self, output_dir: Path, track_factory: callable) -> None:
+    def test_missing_source_file_skipped(self, output_dir: Path, track_factory: Callable[..., LocalTrack]) -> None:
         t1 = track_factory("gone", bitrate=320, size=5000, subdir="src1")
         t1.path.unlink()
         t2 = track_factory("gone", bitrate=128, size=2000, subdir="src2")

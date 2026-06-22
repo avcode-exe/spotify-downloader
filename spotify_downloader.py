@@ -1832,6 +1832,11 @@ class SpotifyDownloader(App):
         out = self.query_one("#output-input", Input).value.strip() or "./downloads"
         spotdl_cmd = find_spotdl()
         if spotdl_cmd is None:
+            self._log(
+                "[bold red]✗[/] [bold]spotDL[/] is not installed.\n"
+                "  Install it with: [bold cyan]pip install spotdl[/]"
+            )
+            log.error("spotDL not found on PATH")
             return
         if not await validate_spotdl(spotdl_cmd):
             self._log(
@@ -1894,6 +1899,11 @@ class SpotifyDownloader(App):
         out = self.query_one("#output-input", Input).value.strip() or "./downloads"
         spotdl_cmd = find_spotdl()
         if spotdl_cmd is None:
+            self._log(
+                "[bold red]✗[/] [bold]spotDL[/] is not installed.\n"
+                "  Install it with: [bold cyan]pip install spotdl[/]"
+            )
+            log.error("spotDL not found on PATH")
             return
         if not await validate_spotdl(spotdl_cmd):
             self._log(
@@ -1950,6 +1960,11 @@ class SpotifyDownloader(App):
         out = self.query_one("#output-input", Input).value.strip() or "./downloads"
         spotdl_cmd = find_spotdl()
         if spotdl_cmd is None:
+            self._log(
+                "[bold red]✗[/] [bold]spotDL[/] is not installed.\n"
+                "  Install it with: [bold cyan]pip install spotdl[/]"
+            )
+            log.error("spotDL not found on PATH")
             return
         if not await validate_spotdl(spotdl_cmd):
             self._log(

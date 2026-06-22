@@ -405,6 +405,7 @@ class SpotDLWorker:
         finally:
             self._process = None
             save_track_state(self._track_state)
+            loop.close()
 
     def _record_completed_track(
         self, track_name: str, output_folder: str, status: str

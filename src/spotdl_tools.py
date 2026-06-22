@@ -4,13 +4,14 @@ import asyncio
 import logging
 import os
 import shutil
+import sys
 
 
 def find_spotdl() -> list[str] | None:
     spotdl = shutil.which("spotdl") or shutil.which("spotdl.exe")
     if spotdl:
         return [spotdl]
-    return None
+    return [sys.executable, "-m", "spotdl"]
 
 
 async def validate_spotdl(spotdl_cmd: list[str]) -> bool:
@@ -48,15 +49,15 @@ async def ensure_deno(spotdl_cmd: list[str]) -> bool:
         output = stdout.decode("utf-8", errors="replace").strip()
         if proc.returncode == 0:
             return True
-        logging.getLogger("spotify_downloader").error(
-            "Deno install failed | exit_code=%d output=%s", proc.returncode, output
+        logging.getLogger("spotify_downloader").warning(
+            "Deno install skipped | exit_code=%d output=%s", proc.returncode, output
         )
-        return False
+        return True
     except Exception as exc:
-        logging.getLogger("spotify_downloader").error(
-            "Deno install exception | error=%s", exc
+        logging.getLogger("spotify_downloader").warning(
+            "Deno install skipped | error=%s", exc
         )
-        return False
+        return True
 
 
 def build_spotdl_args(

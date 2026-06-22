@@ -1,21 +1,21 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Callable
 
 import pytest
 
 from src.manifest import (
-    SAFE_MOVE_REASONS,
     group_duplicates,
     normalize_name,
     scan_output_folder,
     summarize_scan,
 )
-from src.models import DuplicateGroup, LocalTrack
+from src.models import LocalTrack
 
 
 @pytest.fixture()
-def fake_track_factory(tmp_path: Path) -> callable:
+def fake_track_factory(tmp_path: Path) -> Callable[..., LocalTrack]:
     def _factory(
         name: str,
         *,
@@ -92,7 +92,7 @@ class TestScanOutputFolder:
 
 
 class TestGroupDuplicates:
-    def test_no_duplicates(self, fake_track_factory: callable) -> None:
+    def test_no_duplicates(self, fake_track_factory: Callable[..., LocalTrack]) -> None:
         tracks = [
             fake_track_factory("song-a"),
             fake_track_factory("song-b"),
@@ -100,7 +100,7 @@ class TestGroupDuplicates:
         groups = group_duplicates(tracks)
         assert len(groups) == 0
 
-    def test_same_normalized_filename(self, fake_track_factory: callable) -> None:
+    def test_same_normalized_filename(self, fake_track_factory: Callable[..., LocalTrack]) -> None:
         tracks = [
             fake_track_factory("My Song", subdir="a"),
             fake_track_factory("My Song", subdir="b"),
@@ -111,7 +111,7 @@ class TestGroupDuplicates:
         assert len(safe_groups) == 1
         assert safe_groups[0].reason == "same normalized filename"
 
-    def test_metadata_title_artist_match(self, fake_track_factory: callable) -> None:
+    def test_metadata_title_artist_match(self, fake_track_factory: Callable[..., LocalTrack]) -> None:
         tracks = [
             fake_track_factory("file-a", title="Hello", artist="World", subdir="a"),
             fake_track_factory("file-b", title="Hello", artist="World", subdir="b"),
@@ -121,7 +121,7 @@ class TestGroupDuplicates:
         assert groups[0].reason == "possible metadata title/artist"
         assert groups[0].safe_to_move is False
 
-    def test_mixed_groups_sorted_safe_first(self, fake_track_factory: callable) -> None:
+    def test_mixed_groups_sorted_safe_first(self, fake_track_factory: Callable[..., LocalTrack]) -> None:
         tracks = [
             fake_track_factory("A Song", title="A Song", artist="X", subdir="a1"),
             fake_track_factory("A Song", title="A Song", artist="X", subdir="a2"),
@@ -138,7 +138,7 @@ class TestGroupDuplicates:
 
 
 class TestSummarizeScan:
-    def test_summary_counts(self, fake_track_factory: callable) -> None:
+    def test_summary_counts(self, fake_track_factory: Callable[..., LocalTrack]) -> None:
         tracks = [
             fake_track_factory("a", bitrate=320, size=5000),
             fake_track_factory("b", bitrate=128, size=2000),
@@ -151,7 +151,7 @@ class TestSummarizeScan:
         assert summary["duplicate_copies"] == 1
         assert summary["unique_tracks"] == 2
 
-    def test_no_groups(self, fake_track_factory: callable) -> None:
+    def test_no_groups(self, fake_track_factory: Callable[..., LocalTrack]) -> None:
         tracks = [fake_track_factory("unique")]
         summary = summarize_scan(tracks, [])
         assert summary["duplicate_groups"] == 0

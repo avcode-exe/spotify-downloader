@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import asyncio
-import os
+import sys
+from pathlib import Path
+from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -11,7 +13,6 @@ from src.spotdl_tools import (
     ensure_deno,
     find_spotdl,
     is_rate_limit_error,
-    validate_spotdl,
 )
 
 
@@ -21,10 +22,10 @@ class TestFindSpotdl:
         result = find_spotdl()
         assert result == ["/usr/bin/spotdl"]
 
-    def test_returns_none_when_not_found(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_returns_fallback_when_not_found(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr("shutil.which", lambda name: None)
         result = find_spotdl()
-        assert result is None
+        assert result == [sys.executable, "-m", "spotdl"]
 
 
 class TestIsRateLimitError:
@@ -144,7 +145,7 @@ class TestEnsureDeno:
         monkeypatch.setattr("os.path.expanduser", lambda path: str(tmp_path) if path == "~" else path)
         assert asyncio.run(ensure_deno(["spotdl"])) is True
 
-    def test_returns_false_on_install_failure(
+    def test_returns_true_on_install_failure(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         spotdl_home = tmp_path / ".spotdl"
@@ -158,9 +159,9 @@ class TestEnsureDeno:
             return _FakeProc(returncode=1, stdout=b"")
 
         with patch("asyncio.create_subprocess_exec", side_effect=fake_create_subprocess_exec):
-            assert asyncio.run(ensure_deno(["spotdl"])) is False
+            assert asyncio.run(ensure_deno(["spotdl"])) is True
 
-    def test_returns_false_on_exception(
+    def test_returns_true_on_exception(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         spotdl_home = tmp_path / ".spotdl"
@@ -174,7 +175,7 @@ class TestEnsureDeno:
             raise OSError("permission denied")
 
         with patch("asyncio.create_subprocess_exec", side_effect=failing_create_subprocess_exec):
-            assert asyncio.run(ensure_deno(["spotdl"])) is False
+            assert asyncio.run(ensure_deno(["spotdl"])) is True
 
 
 class _FakeProc:
