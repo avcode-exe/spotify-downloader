@@ -11,8 +11,7 @@ def find_spotdl() -> list[str] | None:
     spotdl = shutil.which("spotdl") or shutil.which("spotdl.exe")
     if spotdl:
         return [spotdl]
-    fallback = [sys.executable, "-m", "spotdl"]
-    return fallback
+    return None
 
 
 async def validate_spotdl(spotdl_cmd: list[str]) -> bool:
@@ -53,12 +52,12 @@ async def ensure_deno(spotdl_cmd: list[str]) -> bool:
         logging.getLogger("spotify_downloader").error(
             "Deno install failed | exit_code=%d output=%s", proc.returncode, output
         )
-        return True
+        return False
     except Exception as exc:
         logging.getLogger("spotify_downloader").error(
             "Deno install exception | error=%s", exc
         )
-        return True
+        return False
 
 
 def build_spotdl_args(

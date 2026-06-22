@@ -32,6 +32,7 @@ class SpotifyDownloaderGUI(ctk.CTk):
         self.title("Spotify Playlist Downloader")
         self.geometry("1200x800")
         self.minsize(1024, 768)
+        self.protocol("WM_DELETE_WINDOW", self._on_close)
 
         default_bg = SPOTIFY_BLACK
         self.configure(fg_color=default_bg)
@@ -235,27 +236,35 @@ class SpotifyDownloaderGUI(ctk.CTk):
 
     def _on_download(self) -> None:
         url = self._home_frame.url_entry.get().strip()
-        if not url:
+        if not url or not (
+            url.startswith("https://open.spotify.com/playlist/")
+            or url.startswith("spotify:playlist:")
+        ):
             self._log_frame.write(
                 "Invalid URL. Must start with https://open.spotify.com/playlist/ or spotify:playlist:"
             )
             return
+        self._check_cookie_file()
         output_folder = self._home_frame.output_entry.get().strip() or "./downloads"
         self._start_worker(url, output_folder, fresh=False)
 
     def _on_fresh(self) -> None:
         url = self._home_frame.url_entry.get().strip()
-        if not url:
+        if not url or not (
+            url.startswith("https://open.spotify.com/playlist/")
+            or url.startswith("spotify:playlist:")
+        ):
             self._log_frame.write(
                 "Invalid URL. Must start with https://open.spotify.com/playlist/ or spotify:playlist:"
             )
             return
+        self._check_cookie_file()
         output_folder = self._home_frame.output_entry.get().strip() or "./downloads"
         self._start_worker(url, output_folder, fresh=True)
 
     def _start_worker(self, url: str, output_folder: str, fresh: bool) -> None:
         self._worker = SpotDLWorker(
-            self._settings, output_folder, self._on_worker_event
+            self._settings, output_folder, self._on_worker_event, tk_root=self
         )
         self._home_frame.set_busy(True)
         self._worker.start_download(url, fresh=fresh)
@@ -283,6 +292,10 @@ class SpotifyDownloaderGUI(ctk.CTk):
                 result.data.get("track", "—"),
                 result.data.get("progress", 0.0),
             )
+        elif result.kind == "progress":
+            total = result.data.get("total", 0)
+            if total > 0:
+                self._home_frame.progress.configure(maximum=total)
         elif result.kind == "track":
             self._home_frame.update_status(
                 self._home_frame.status_var.get(),
@@ -302,6 +315,20 @@ class SpotifyDownloaderGUI(ctk.CTk):
         elif result.kind == "error":
             self._log_frame.write(f"✗ {result.error}")
             self._home_frame.set_busy(False)
+
+    def _check_cookie_file(self) -> None:
+        cookie_file = self._settings.get("cookie_file", "").strip()
+        if cookie_file and not os.path.isfile(cookie_file):
+            self._log_frame.write(
+                f"Cookie file not found: {cookie_file}\n"
+                "   Downloads may fail due to YouTube rate limiting. "
+                "Update the path in Settings or re-export cookies from your browser."
+            )
+
+    def _on_close(self) -> None:
+        if self._worker is not None:
+            self._worker.cancel()
+        self.destroy()
 
     def _check_dependency_updates(self) -> None:
         self._log_frame.write("✓ Ready")

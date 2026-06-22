@@ -15,7 +15,7 @@ echo.
 
 if %CLEAN_ONLY%==1 goto :clean
 
-echo [1/4] Checking Python...
+echo [1/5] Checking Python...
 python --version >nul 2>&1
 if errorlevel 1 (
     echo ERROR: Python is not installed or not in PATH.
@@ -25,11 +25,11 @@ if errorlevel 1 (
 python --version
 
 echo.
-echo [2/4] Installing build dependencies...
+echo [2/5] Installing build dependencies...
 pip install -q pyinstaller
 
 echo.
-echo [3/4] Cleaning previous build...
+echo [3/5] Cleaning previous build...
 goto :clean
 
 :build
@@ -38,6 +38,14 @@ echo [4/5] Building executable...
 pyinstaller --noconfirm --clean ^
     --name "SpotifyDownloader" ^
     --add-data "src;src" ^
+    --exclude-module numpy ^
+    --exclude-module scipy ^
+    --exclude-module sklearn ^
+    --exclude-module pandas ^
+    --exclude-module matplotlib ^
+    --exclude-module IPython ^
+    --exclude-module jupyter ^
+    -s -w ^
     gui_app.py
 
 echo.

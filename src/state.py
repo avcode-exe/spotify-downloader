@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from datetime import datetime, timezone
 from pathlib import Path
@@ -32,8 +33,9 @@ def save_track_state(state: list[dict[str, Any]]) -> None:
         os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
         with open(STATE_FILE, "w", encoding="utf-8") as f:
             json.dump(state, f, indent=2, ensure_ascii=False)
-    except OSError:
-        return
+    except OSError as exc:
+        log = logging.getLogger("spotify_downloader")
+        log.warning("Could not save track state | error=%s", exc)
 
 
 def upsert_track_state(
@@ -106,6 +108,13 @@ def update_paths_from_scan(state: list[dict[str, Any]], tracks: list[Any]) -> No
             getattr(track, "normalized_name", None)
             or Path(getattr(track, "filename", "")).stem.lower()
         )
+        existing = next(
+            (e for e in state if str(e.get("key", "")).strip().lower() == str(key).strip().lower()),
+            None,
+        )
+        current_status = existing.get("status") if existing else None
+        if current_status in {"failed", "quarantined"}:
+            continue
         upsert_track_state(
             state,
             key=str(key),

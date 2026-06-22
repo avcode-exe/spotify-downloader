@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Callable
+
 import customtkinter as ctk
 
 from .theme import (
@@ -20,12 +22,12 @@ class HomeFrame(ctk.CTkFrame):
     def __init__(
         self,
         master: ctk.CTk,
-        on_download: callable,
-        on_fresh: callable,
-        on_preview: callable,
-        on_duplicates: callable,
-        on_retry: callable,
-        on_cancel: callable,
+        on_download: Callable[[], None],
+        on_fresh: Callable[[], None],
+        on_preview: Callable[[], None],
+        on_duplicates: Callable[[], None],
+        on_retry: Callable[[], None],
+        on_cancel: Callable[[], None],
     ) -> None:
         super().__init__(
             master,
@@ -243,7 +245,9 @@ class HomeFrame(ctk.CTkFrame):
             self.output_entry.insert(0, directory)
 
     def _quit(self) -> None:
-        self.winfo_toplevel().quit()
+        top = self.winfo_toplevel()
+        top.quit()
+        top.destroy()
 
     def set_busy(self, busy: bool) -> None:
         state = "disabled" if busy else "normal"

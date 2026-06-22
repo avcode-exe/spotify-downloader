@@ -39,7 +39,6 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 Name: "quicklaunchicon"; Description: "{cm:CreateQuickLaunchIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked; OnlyBelowVersion: 6.1; Check: not IsAdminInstallMode
-Name: "installtui"; Description: "Install TUI dependencies (textual)"; GroupDescription: "Optional components:"; Flags: unchecked
 
 [Files]
 Source: "dist\SpotifyDownloader\SpotifyDownloader.exe"; DestDir: "{app}"; Flags: ignoreversion
@@ -57,13 +56,4 @@ Name: "{userappdata}\Microsoft\Internet Explorer\Quick Launch\{#MyAppName}"; Fil
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}"; Flags: nowait postinstall skipifsilent
 
 [Code]
-// Optional: Install TUI dependencies if the user selected the task
-function InitializeSetup(): Boolean;
-begin
-  Result := true;
-end;
-
-function ShouldInstallTUI(): Boolean;
-begin
-  Result := IsTaskSelected('installtui');
-end;
+// No custom code needed

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import customtkinter as ctk
-
 SPOTIFY_GREEN = "#1DB954"
 SPOTIFY_BLACK = "#000000"
 SPOTIFY_DARK_GRAY = "#111111"
@@ -10,8 +8,6 @@ SPOTIFY_WHITE = "#FFFFFF"
 SPOTIFY_HOVER_GREEN = "#1ED760"
 SPOTIFY_DISABLED_GRAY = "#404040"
 SPOTIFY_BORDER_COLOR = "#333333"
-
-ctk.set_appearance_mode("dark")
 
 FONT_TITLE = ("Segoe UI", 22, "bold")
 FONT_SUBTITLE = ("Segoe UI", 12)
@@ -22,6 +18,7 @@ FONT_MONO = ("Consolas", 10)
 
 
 def apply_theme() -> None:
+    import customtkinter as ctk
     ctk.set_appearance_mode("dark")
 
 

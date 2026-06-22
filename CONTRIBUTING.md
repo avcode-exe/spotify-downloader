@@ -133,15 +133,30 @@ The app launches a Textual TUI. Use mouse or keyboard to navigate.
 
 ```
 spotify_downloader/
-├── spotify_downloader.py   # Main application (TUI + download logic)
-├── requirements.txt        # Python dependencies
-├── README.md               # User documentation
-├── CONTRIBUTING.md         # This file
-└── downloads/              # Default output directory
+├── src/
+│   ├── gui/               # CustomTkinter desktop GUI
+│   │   ├── app.py
+│   │   ├── home_frame.py
+│   │   ├── settings_frame.py
+│   │   ├── preview_frame.py
+│   │   ├── duplicates_frame.py
+│   │   ├── history_frame.py
+│   │   ├── log_frame.py
+│   │   ├── workers.py
+│   │   ├── utils.py
+│   │   └── theme.py
+│   ├── models.py
+│   ├── state.py
+│   ├── spotdl_tools.py
+│   ├── manifest.py
+│   └── duplicates.py
+├── gui_app.py             # GUI entry point
+├── spotify_downloader.py  # TUI entry point
+├── requirements.txt
+├── build.ps1 / build.bat  # Windows EXE build scripts
+├── installer.iss          # Inno Setup script
+└── README.md
 ```
-
-The entire application is a single file (`spotify_downloader.py`). This is
-intentional — it keeps the project easy to distribute and understand.
 
 ## Code Style
 
@@ -152,8 +167,6 @@ intentional — it keeps the project easy to distribute and understand.
 - **Docstrings:** Use Google-style docstrings for public methods.
 - **Imports:** Group in order: stdlib, third-party, local. Alphabetical within groups.
 - **Naming:** `snake_case` for functions/variables, `PascalCase` for classes.
-- **Single file:** Keep everything in `spotify_downloader.py`. If the file grows
-  too large (>2000 lines), discuss splitting in an issue first.
 
 ### Recommended tooling
 

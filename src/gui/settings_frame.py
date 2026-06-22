@@ -20,6 +20,15 @@ from .theme import (
     frame_kwargs,
 )
 
+BROWSER_OPTIONS = [
+    "auto",
+    "chrome",
+    "firefox",
+    "edge",
+    "brave",
+    "vivaldi",
+]
+
 
 class SettingsFrame(ctk.CTkFrame):
     def __init__(
@@ -59,6 +68,9 @@ class SettingsFrame(ctk.CTkFrame):
         self._cookie_file_var = ctk.StringVar(
             value=self._settings.get("cookie_file", "")
         )
+        self._browser_var = ctk.StringVar(
+            value=self._settings.get("browser", "auto")
+        )
 
         format_options = ["mp3", "m4a", "flac", "opus", "ogg", "wav"]
         bitrate_options = [
@@ -89,6 +101,7 @@ class SettingsFrame(ctk.CTkFrame):
         self._add_select_row(
             inner, "Duplicate policy", self._policy_var, policy_options
         )
+        self._add_select_row(inner, "Browser", self._browser_var, BROWSER_OPTIONS)
         self._add_entry_row(inner, "Proxy", self._proxy_var)
         self._add_entry_row(inner, "Cookie file", self._cookie_file_var)
 
@@ -206,6 +219,7 @@ class SettingsFrame(ctk.CTkFrame):
                 "bitrate": self._bitrate_var.get(),
                 "audio_provider": self._provider_var.get(),
                 "duplicate_policy": self._policy_var.get(),
+                "browser": self._browser_var.get(),
                 "proxy": self._proxy_var.get().strip(),
                 "cookie_file": self._cookie_file_var.get().strip(),
             }
@@ -220,6 +234,7 @@ class SettingsFrame(ctk.CTkFrame):
             f"Bitrate: {self._settings.get('bitrate', 'auto')}",
             f"Source: {self._settings.get('audio_provider', 'youtube-music').replace('-', ' ').title()}",
             f"Duplicate: {dict(DUPLICATE_POLICY_OPTIONS).get(self._settings.get('duplicate_policy', 'skip'), 'skip')}",
+            f"Browser: {self._settings.get('browser', 'auto').title()}",
         ]
         if self._settings.get("proxy"):
             parts.append(f"Proxy: {self._settings['proxy']}")

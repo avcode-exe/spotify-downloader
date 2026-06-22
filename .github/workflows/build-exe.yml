@@ -37,7 +37,14 @@ jobs:
           pyinstaller --noconfirm --clean `
             --name "SpotifyDownloader" `
             --add-data "src;src" `
-            --hidden-import customtkinter `
+            --exclude-module numpy `
+            --exclude-module scipy `
+            --exclude-module sklearn `
+            --exclude-module pandas `
+            --exclude-module matplotlib `
+            --exclude-module IPython `
+            --exclude-module jupyter `
+            -s -w `
             gui_app.py
 
       - name: Upload EXE artifact

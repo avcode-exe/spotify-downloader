@@ -26,19 +26,19 @@ function Invoke-Clean {
 }
 
 if ($Clean) {
-    Write-Host "================================____________" -ForegroundColor Cyan
-    Write-Host "Spotify Downloader - Clean" -ForegroundColor Cyan
-    Write-Host "================================____________" -ForegroundColor Cyan
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host "Spotify Downloader - Clean" -ForegroundColor Cyan
+Write-Host "========================================" -ForegroundColor Cyan
     Invoke-Clean
     exit 0
 }
 
-Write-Host "================================____________" -ForegroundColor Cyan
+Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "Spotify Downloader - Build Script" -ForegroundColor Cyan
-Write-Host "================================____________" -ForegroundColor Cyan
+Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
-Write-Host "[1/4] Checking Python..." -ForegroundColor Yellow
+Write-Host "[1/5] Checking Python..." -ForegroundColor Yellow
 $python = Get-Command python -ErrorAction SilentlyContinue
 if (-not $python) {
     Write-Host "ERROR: Python is not installed or not in PATH." -ForegroundColor Red
@@ -47,11 +47,11 @@ if (-not $python) {
 python --version
 
 Write-Host ""
-Write-Host "[2/4] Installing build dependencies..." -ForegroundColor Yellow
+Write-Host "[2/5] Installing build dependencies..." -ForegroundColor Yellow
 pip install -q pyinstaller
 
 Write-Host ""
-Write-Host "[3/4] Cleaning previous build..." -ForegroundColor Yellow
+Write-Host "[3/5] Cleaning previous build..." -ForegroundColor Yellow
 Invoke-Clean
 
 Write-Host ""
@@ -66,6 +66,15 @@ $pyinstallerArgs = @(
     "--clean"
     "--name", "SpotifyDownloader"
     "--add-data", "src;src"
+    "--exclude-module", "numpy"
+    "--exclude-module", "scipy"
+    "--exclude-module", "sklearn"
+    "--exclude-module", "pandas"
+    "--exclude-module", "matplotlib"
+    "--exclude-module", "IPython"
+    "--exclude-module", "jupyter"
+    "-s"
+    "-w"
     "gui_app.py"
 )
 

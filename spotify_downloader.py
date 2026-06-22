@@ -717,7 +717,7 @@ class SpotifyDownloader(App):
                     with Horizontal():
                         yield Button("📜 History", id="history-btn")
                         yield Button("⚙ Settings", id="settings-btn")
-                        yield Button("🗑  Clear Log", id="clear-history-btn")
+                        yield Button("🗑  Clear History & Log", id="clear-history-btn")
                 with Container(classes="button-group"):
                     with Horizontal():
                         yield Button(
@@ -1186,7 +1186,7 @@ class SpotifyDownloader(App):
             return Version(a) > Version(b)
         except Exception:
             pass
-        return a > b
+        return False
 
     async def _check_dependency_updates(self) -> None:
         updates: list[str] = []
@@ -1326,45 +1326,6 @@ class SpotifyDownloader(App):
             f"[red]{state_summary['failed']}[/] failed · "
             f"[orange1]{state_summary['quarantined']}[/] quarantined"
         )
-
-    async def _ensure_deno(self, spotdl_cmd: list[str]) -> bool:
-        if shutil.which("deno") or shutil.which("deno.exe"):
-            log.debug("Deno found on PATH")
-            return True
-        spotdl_home = os.path.join(os.path.expanduser("~"), ".spotdl")
-        for name in ("deno", "deno.exe"):
-            if os.path.isfile(os.path.join(spotdl_home, name)):
-                log.debug(
-                    "Deno found bundled | path=%s", os.path.join(spotdl_home, name)
-                )
-                return True
-        log.info("Deno not found — attempting install via spotDL")
-        self._log("[bold yellow]⟳[/] Deno not found — installing for YouTube support …")
-        try:
-            proc = await asyncio.create_subprocess_exec(
-                *spotdl_cmd,
-                "--download-deno",
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.STDOUT,
-            )
-            stdout, _ = await proc.communicate()
-            output = stdout.decode("utf-8", errors="replace").strip()
-            if proc.returncode == 0:
-                log.info("Deno installed successfully | output=%s", output)
-                self._log("[bold green]✓[/] Deno installed successfully")
-                return True
-            log.error(
-                "Deno install failed | exit_code=%d output=%s", proc.returncode, output
-            )
-            self._log(
-                "[bold red]✗[/] Could not install Deno. Some downloads may fail.\n"
-                "  Install manually: [bold cyan]spotdl --download-deno[/]"
-            )
-            return True
-        except Exception as exc:
-            log.error("Deno install exception | error=%s", exc, exc_info=True)
-            self._log(f"[bold red]✗[/] Deno install failed: {exc}")
-            return True
 
     def _lock_ui(self) -> None:
         self.query_one("#download-btn", Button).disabled = True

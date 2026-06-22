@@ -28,6 +28,17 @@ from src.state import (
 from .utils import format_download_status, format_elapsed, strip_ansi
 
 
+DOWNLOADING_RE = re.compile(r"Downloading\s+(.+)", re.IGNORECASE)
+DONE_RE = re.compile(r"(?:Downloaded|✓)\s+(.+)", re.IGNORECASE)
+SKIPPED_RE = re.compile(
+    r"Skipping\s+(.+)\s+as it is already downloaded", re.IGNORECASE
+)
+ERROR_RE = re.compile(
+    r"(?:AudioProviderError|Failed to download)", re.IGNORECASE
+)
+FOUND_RE = re.compile(r"Found\s+(\d+)\s+songs", re.IGNORECASE)
+
+
 @dataclass
 class WorkerResult:
     kind: str
@@ -41,10 +52,12 @@ class SpotDLWorker:
         settings: dict[str, str],
         output_folder: str,
         on_event: Callable[[WorkerResult], None],
+        tk_root: Any = None,
     ) -> None:
         self._settings = settings
         self._output_folder = output_folder
         self._on_event = on_event
+        self._tk_root = tk_root
         self._process: asyncio.subprocess.Process | None = None
         self._cancel_requested = False
         self._failed_tracks: list[str] = []
@@ -66,7 +79,11 @@ class SpotDLWorker:
                 pass
 
     def _emit(self, kind: str, data: Any = None, error: str | None = None) -> None:
-        self._on_event(WorkerResult(kind=kind, data=data, error=error))
+        result = WorkerResult(kind=kind, data=data, error=error)
+        if self._tk_root is not None:
+            self._tk_root.after(0, lambda: self._on_event(result))
+        else:
+            self._on_event(result)
 
     def _run_download(self, url: str, fresh: bool) -> None:
         try:
@@ -154,16 +171,6 @@ class SpotDLWorker:
     def _run_spotdl(
         self, cmd: list[str], url: str = "", output_folder: str = ""
     ) -> None:
-        downloading_re = re.compile(r"Downloading\s+(.+)", re.IGNORECASE)
-        done_re = re.compile(r"(?:Downloaded|✓)\s+(.+)", re.IGNORECASE)
-        skipped_re = re.compile(
-            r"Skipping\s+(.+)\s+as it is already downloaded", re.IGNORECASE
-        )
-        error_re = re.compile(
-            r"(?:AudioProviderError|Failed to download)", re.IGNORECASE
-        )
-        found_re = re.compile(r"Found\s+(\d+)\s+songs", re.IGNORECASE)
-
         downloaded = 0
         skipped = 0
         failed = 0
@@ -204,7 +211,7 @@ class SpotDLWorker:
                     if not text:
                         continue
 
-                    m = downloading_re.search(text)
+                    m = DOWNLOADING_RE.search(text)
                     if m:
                         in_traceback = False
                         pending_done = False
@@ -213,7 +220,7 @@ class SpotDLWorker:
                         self._emit("log", {"message": f"↓ {track_name}"})
                         continue
 
-                    m = skipped_re.search(text)
+                    m = SKIPPED_RE.search(text)
                     if m:
                         in_traceback = False
                         track_name = m.group(1).strip()
@@ -228,7 +235,7 @@ class SpotDLWorker:
                         )
                         continue
 
-                    m = done_re.search(text)
+                    m = DONE_RE.search(text)
                     if m:
                         in_traceback = False
                         track_name = m.group(1).strip()
@@ -260,7 +267,7 @@ class SpotDLWorker:
                             },
                         )
 
-                    m = found_re.search(text)
+                    m = FOUND_RE.search(text)
                     if m:
                         in_traceback = False
                         total = int(m.group(1))
@@ -273,16 +280,16 @@ class SpotDLWorker:
 
                     if in_traceback:
                         if (
-                            downloading_re.search(text)
-                            or done_re.search(text)
-                            or found_re.search(text)
-                            or error_re.search(text)
+                            DOWNLOADING_RE.search(text)
+                            or DONE_RE.search(text)
+                            or FOUND_RE.search(text)
+                            or ERROR_RE.search(text)
                         ):
                             in_traceback = False
                         else:
                             continue
 
-                    if error_re.search(text):
+                    if ERROR_RE.search(text):
                         failed += 1
                         self._record_failed_track(text, output_folder)
                         self._emit("log", {"message": f"✗ {text}"})
