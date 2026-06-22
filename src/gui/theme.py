@@ -19,6 +19,7 @@ FONT_MONO = ("Consolas", 10)
 
 def apply_theme() -> None:
     import customtkinter as ctk
+
     ctk.set_appearance_mode("dark")
 
 

@@ -68,9 +68,7 @@ class SettingsFrame(ctk.CTkFrame):
         self._cookie_file_var = ctk.StringVar(
             value=self._settings.get("cookie_file", "")
         )
-        self._browser_var = ctk.StringVar(
-            value=self._settings.get("browser", "auto")
-        )
+        self._browser_var = ctk.StringVar(value=self._settings.get("browser", "auto"))
 
         format_options = ["mp3", "m4a", "flac", "opus", "ogg", "wav"]
         bitrate_options = [

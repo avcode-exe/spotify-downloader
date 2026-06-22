@@ -109,7 +109,11 @@ def update_paths_from_scan(state: list[dict[str, Any]], tracks: list[Any]) -> No
             or Path(getattr(track, "filename", "")).stem.lower()
         )
         existing = next(
-            (e for e in state if str(e.get("key", "")).strip().lower() == str(key).strip().lower()),
+            (
+                e
+                for e in state
+                if str(e.get("key", "")).strip().lower() == str(key).strip().lower()
+            ),
             None,
         )
         current_status = existing.get("status") if existing else None
