@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 STATE_FILE = os.path.join(os.path.expanduser("~"), ".spotdl", "track_state.json")
+HISTORY_FILE = os.path.join(os.path.expanduser("~"), ".spotdl", "download_history.json")
+SETTINGS_FILE = os.path.join(os.path.expanduser("~"), ".spotdl", "settings.json")
 
 
 def _load_raw() -> list[dict[str, Any]]:
@@ -30,8 +33,9 @@ def save_track_state(state: list[dict[str, Any]]) -> None:
         os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
         with open(STATE_FILE, "w", encoding="utf-8") as f:
             json.dump(state, f, indent=2, ensure_ascii=False)
-    except OSError:
-        return
+    except OSError as exc:
+        log = logging.getLogger("spotify_downloader")
+        log.warning("Could not save track state | error=%s", exc)
 
 
 def upsert_track_state(
@@ -100,7 +104,21 @@ def summarize_track_state(state: list[dict[str, Any]]) -> dict[str, int]:
 
 def update_paths_from_scan(state: list[dict[str, Any]], tracks: list[Any]) -> None:
     for track in tracks:
-        key = getattr(track, "normalized_name", None) or Path(getattr(track, "filename", "")).stem.lower()
+        key = (
+            getattr(track, "normalized_name", None)
+            or Path(getattr(track, "filename", "")).stem.lower()
+        )
+        existing = next(
+            (
+                e
+                for e in state
+                if str(e.get("key", "")).strip().lower() == str(key).strip().lower()
+            ),
+            None,
+        )
+        current_status = existing.get("status") if existing else None
+        if current_status in {"failed", "quarantined"}:
+            continue
         upsert_track_state(
             state,
             key=str(key),

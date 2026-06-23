@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -40,7 +41,7 @@ def quarantine_duplicate_copies(
                 destination.mkdir(parents=True, exist_ok=True)
             target = _unique_path(destination / track.path.name)
             try:
-                track.path.rename(target)
+                shutil.move(str(track.path), str(target))
                 moved.append(
                     {
                         "source": str(track.path),

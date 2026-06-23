@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, master]
+    branches: ['**']
   pull_request:
-    branches: [main, master]
+    branches: ['**']
 
 jobs:
   lint:
@@ -22,10 +22,10 @@ jobs:
         run: pip install ruff
 
       - name: Ruff check
-        run: ruff check spotify_downloader.py
+        run: ruff check spotify_downloader.py gui_app.py installer.py src/
 
       - name: Ruff format check
-        run: ruff format --check spotify_downloader.py
+        run: ruff format --check spotify_downloader.py gui_app.py installer.py src/
 
   compile:
     name: Compile (Python ${{ matrix.python-version }})
@@ -47,7 +47,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Compile check
-        run: python -m py_compile spotify_downloader.py
+        run: python -m py_compile spotify_downloader.py gui_app.py installer.py src/manifest.py src/models.py src/spotdl_tools.py src/state.py src/duplicates.py && python -m compileall -q src/gui
 
   validate:
     name: Validate on ${{ matrix.os }}
@@ -67,8 +67,17 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Check imports work
-        run: python -c "from textual.app import App; from textual.widgets import Button, Input, Label, ProgressBar, RichLog, Select; print('All imports OK')"
+      - name: Check TUI imports work
+        run: python -c "from textual.app import App; from textual.widgets import Button, Input, Label, ProgressBar, RichLog, Select; print('All TUI imports OK')"
 
-      - name: Verify app module loads
-        run: python -c "import spotify_downloader; print('Module loaded OK')"
+      - name: Check GUI imports work
+        run: python -c "import customtkinter; from src.gui.app import SpotifyDownloaderGUI; print('All GUI imports OK')"
+
+      - name: Verify TUI module loads
+        run: python -c "import spotify_downloader; print('TUI module loaded OK')"
+
+      - name: Verify GUI module loads
+        run: python -c "import gui_app; print('GUI module loaded OK')"
+
+      - name: Verify installer module loads
+        run: python -c "import installer; print('Installer module loaded OK')"
