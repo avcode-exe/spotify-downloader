@@ -10,9 +10,7 @@ import sys
 
 DOWNLOADING_RE = re.compile(r"Downloading\s+(.+)", re.IGNORECASE)
 DONE_RE = re.compile(r"(?:Downloaded|✓)\s+(.+)", re.IGNORECASE)
-SKIPPED_RE = re.compile(
-    r"Skipping\s+(.+)\s+as it is already downloaded", re.IGNORECASE
-)
+SKIPPED_RE = re.compile(r"Skipping\s+(.+)\s+as it is already downloaded", re.IGNORECASE)
 ERROR_RE = re.compile(r"(?:AudioProviderError|Failed to download)", re.IGNORECASE)
 FOUND_RE = re.compile(r"Found\s+(\d+)\s+songs", re.IGNORECASE)
 

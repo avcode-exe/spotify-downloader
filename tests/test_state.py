@@ -146,7 +146,11 @@ class TestUpdatePathsFromScan:
         from pathlib import Path
 
         track = Path("/music/song.mp3")
-        track_obj = type("Track", (), {"normalized_name": "song", "title": "Song", "artist": "A", "path": track})()
+        track_obj = type(
+            "Track",
+            (),
+            {"normalized_name": "song", "title": "Song", "artist": "A", "path": track},
+        )()
         update_paths_from_scan(empty_state, [track_obj])
         assert len(empty_state) == 1
         assert empty_state[0]["status"] == "downloaded"
@@ -156,7 +160,16 @@ class TestUpdatePathsFromScan:
         from pathlib import Path
 
         track = Path("/music/track-two.mp3")
-        track_obj = type("Track", (), {"normalized_name": "track-two", "title": "Track Two", "artist": None, "path": track})()
+        track_obj = type(
+            "Track",
+            (),
+            {
+                "normalized_name": "track-two",
+                "title": "Track Two",
+                "artist": None,
+                "path": track,
+            },
+        )()
         update_paths_from_scan(sample_state, [track_obj])
         entry = next(e for e in sample_state if e["key"] == "track-two")
         assert entry["status"] == "failed"
@@ -166,7 +179,16 @@ class TestUpdatePathsFromScan:
         from pathlib import Path
 
         track = Path("/music/track-three.mp3")
-        track_obj = type("Track", (), {"normalized_name": "track-three", "title": "Track Three", "artist": None, "path": track})()
+        track_obj = type(
+            "Track",
+            (),
+            {
+                "normalized_name": "track-three",
+                "title": "Track Three",
+                "artist": None,
+                "path": track,
+            },
+        )()
         update_paths_from_scan(sample_state, [track_obj])
         entry = next(e for e in sample_state if e["key"] == "track-three")
         assert entry["status"] == "quarantined"
@@ -178,7 +200,16 @@ class TestUpdatePathsFromScan:
     def test_inserts_new_entry_when_track_not_found(
         self, empty_state: list[dict]
     ) -> None:
-        track = type("Track", (), {"normalized_name": "new-song", "title": "New Song", "artist": "A", "path": Path("/music/new.mp3")})()
+        track = type(
+            "Track",
+            (),
+            {
+                "normalized_name": "new-song",
+                "title": "New Song",
+                "artist": "A",
+                "path": Path("/music/new.mp3"),
+            },
+        )()
         update_paths_from_scan(empty_state, [track])
         assert len(empty_state) == 1
         assert empty_state[0]["status"] == "downloaded"
@@ -186,22 +217,44 @@ class TestUpdatePathsFromScan:
     def test_falls_back_to_filename_when_normalized_name_missing(
         self, empty_state: list[dict]
     ) -> None:
-        track = type("Track", (), {"filename": "fallback.mp3", "title": "Fallback", "artist": None, "path": Path("/music/fallback.mp3")})()
+        track = type(
+            "Track",
+            (),
+            {
+                "filename": "fallback.mp3",
+                "title": "Fallback",
+                "artist": None,
+                "path": Path("/music/fallback.mp3"),
+            },
+        )()
         update_paths_from_scan(empty_state, [track])
         assert len(empty_state) == 1
         assert empty_state[0]["key"] == "fallback"
 
     def test_key_matching_is_case_insensitive(self, empty_state: list[dict]) -> None:
         track_path = Path("/music/my.mp3")
-        upsert_track_state(empty_state, key="My Song", status="downloaded", title="My Song")
-        track = type("Track", (), {"normalized_name": "my song", "title": "My Song", "artist": "A", "path": track_path})()
+        upsert_track_state(
+            empty_state, key="My Song", status="downloaded", title="My Song"
+        )
+        track = type(
+            "Track",
+            (),
+            {
+                "normalized_name": "my song",
+                "title": "My Song",
+                "artist": "A",
+                "path": track_path,
+            },
+        )()
         update_paths_from_scan(empty_state, [track])
         assert len(empty_state) == 1
         assert empty_state[0]["path"] == str(track_path)
 
 
 class TestSaveTrackState:
-    def test_saves_to_file(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_saves_to_file(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         state_file = tmp_path / "track_state.json"
         monkeypatch.setattr("src.state.STATE_FILE", str(state_file))
         state: list[dict] = [{"key": "x", "status": "downloaded"}]
@@ -228,14 +281,18 @@ class TestSecureJsonWrite:
         save_json_secure(str(target), {"k": "new"})
         assert json.loads(target.read_text(encoding="utf-8")) == {"k": "new"}
 
-    @pytest.mark.skipif(os.name == "nt", reason="POSIX permissions not enforced on Windows")
+    @pytest.mark.skipif(
+        os.name == "nt", reason="POSIX permissions not enforced on Windows"
+    )
     def test_restricts_file_permissions_on_posix(self, tmp_path: Path) -> None:
         target = tmp_path / "secret.json"
         save_json_secure(str(target), {"cookie": "x"})
         mode = target.stat().st_mode & 0o777
         assert mode == 0o600
 
-    @pytest.mark.skipif(os.name == "nt", reason="POSIX permissions not enforced on Windows")
+    @pytest.mark.skipif(
+        os.name == "nt", reason="POSIX permissions not enforced on Windows"
+    )
     def test_ensure_data_dir_restricts_directory_on_posix(self, tmp_path: Path) -> None:
         nested = tmp_path / "sensitive" / "deeper" / "f.json"
         ensure_data_dir(str(nested))

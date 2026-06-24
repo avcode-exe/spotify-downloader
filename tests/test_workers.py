@@ -137,9 +137,7 @@ class TestSpotDLWorkerEmit:
         assert results[0].kind == "log"
         assert results[0].data == {"message": "hello"}
 
-    def test_emit_with_tk_root_schedules_on_main_thread(
-        self, tmp_path: Path
-    ) -> None:
+    def test_emit_with_tk_root_schedules_on_main_thread(self, tmp_path: Path) -> None:
         root = MagicMock()
         root.after = MagicMock()
         results: list[WorkerResult] = []

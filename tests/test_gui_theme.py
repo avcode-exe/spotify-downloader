@@ -39,7 +39,14 @@ class TestThemeConstants:
             assert len(color) in (7, 4)
 
     def test_font_constants_are_tuples(self) -> None:
-        for font in (FONT_TITLE, FONT_SUBTITLE, FONT_LABEL, FONT_BUTTON, FONT_SECTION, FONT_MONO):
+        for font in (
+            FONT_TITLE,
+            FONT_SUBTITLE,
+            FONT_LABEL,
+            FONT_BUTTON,
+            FONT_SECTION,
+            FONT_MONO,
+        ):
             assert isinstance(font, tuple)
             assert len(font) >= 2
 

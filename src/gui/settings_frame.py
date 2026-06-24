@@ -230,9 +230,9 @@ class SettingsFrame(ctk.CTkFrame):
 
     def _status_text(self) -> str:
         settings = self._settings
-        source = settings.get("audio_provider", "youtube-music").replace(
-            "-", " "
-        ).title()
+        source = (
+            settings.get("audio_provider", "youtube-music").replace("-", " ").title()
+        )
         duplicate_policy = settings.get("duplicate_policy", "skip")
         if duplicate_policy not in _DUPLICATE_POLICY_MAP:
             duplicate_policy = "skip"

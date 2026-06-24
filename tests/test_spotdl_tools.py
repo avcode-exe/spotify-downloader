@@ -22,7 +22,9 @@ class TestFindSpotdl:
         result = find_spotdl()
         assert result == ["/usr/bin/spotdl"]
 
-    def test_returns_fallback_when_not_found(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_returns_fallback_when_not_found(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setattr("shutil.which", lambda name: None)
         result = find_spotdl()
         assert result == [sys.executable, "-m", "spotdl"]
@@ -65,9 +67,12 @@ class TestBuildSpotdlArgs:
         )
         assert cmd == [
             "spotdl",
-            "--format", "mp3",
-            "--audio", "youtube-music",
-            "--output", "/downloads",
+            "--format",
+            "mp3",
+            "--audio",
+            "youtube-music",
+            "--output",
+            "/downloads",
             "https://open.spotify.com/playlist/123",
         ]
 
@@ -127,9 +132,7 @@ class TestBuildSpotdlArgs:
         assert "--proxy" not in cmd
 
     def test_urls_appended_at_end(self) -> None:
-        cmd = build_spotdl_args(
-            ["spotdl"], ["url1", "url2"], "/out", {}
-        )
+        cmd = build_spotdl_args(["spotdl"], ["url1", "url2"], "/out", {})
         assert cmd[-2] == "url1"
         assert cmd[-1] == "url2"
 
@@ -148,21 +151,25 @@ class TestBuildSpotdlArgs:
         assert "disable" in cmd
 
     def test_overwrite_metadata(self) -> None:
-        cmd = build_spotdl_args(
-            ["spotdl"], ["url"], "/out", {}, overwrite="metadata"
-        )
+        cmd = build_spotdl_args(["spotdl"], ["url"], "/out", {}, overwrite="metadata")
         assert cmd == [
             "spotdl",
-            "--format", "mp3",
-            "--audio", "youtube-music",
-            "--output", "/out",
-            "--overwrite", "metadata",
+            "--format",
+            "mp3",
+            "--audio",
+            "youtube-music",
+            "--output",
+            "/out",
+            "--overwrite",
+            "metadata",
             "url",
         ]
 
 
 class TestEnsureDeno:
-    def test_returns_true_when_deno_on_path(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_returns_true_when_deno_on_path(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setattr("shutil.which", lambda name: "/usr/bin/deno")
         assert asyncio.run(ensure_deno(["spotdl"])) is True
 
@@ -176,7 +183,9 @@ class TestEnsureDeno:
         monkeypatch.setattr("shutil.which", lambda name: None)
         monkeypatch.setenv("HOME", str(tmp_path))
         monkeypatch.setenv("USERPROFILE", str(tmp_path))
-        monkeypatch.setattr("os.path.expanduser", lambda path: str(tmp_path) if path == "~" else path)
+        monkeypatch.setattr(
+            "os.path.expanduser", lambda path: str(tmp_path) if path == "~" else path
+        )
         assert asyncio.run(ensure_deno(["spotdl"])) is True
 
     def test_returns_false_on_install_failure(
@@ -187,12 +196,16 @@ class TestEnsureDeno:
         monkeypatch.setattr("shutil.which", lambda name: None)
         monkeypatch.setenv("HOME", str(tmp_path))
         monkeypatch.setenv("USERPROFILE", str(tmp_path))
-        monkeypatch.setattr("os.path.expanduser", lambda path: str(tmp_path) if path == "~" else path)
+        monkeypatch.setattr(
+            "os.path.expanduser", lambda path: str(tmp_path) if path == "~" else path
+        )
 
         async def fake_create_subprocess_exec(*args: str, **kwargs: Any) -> _FakeProc:
             return _FakeProc(returncode=1, stdout=b"")
 
-        with patch("asyncio.create_subprocess_exec", side_effect=fake_create_subprocess_exec):
+        with patch(
+            "asyncio.create_subprocess_exec", side_effect=fake_create_subprocess_exec
+        ):
             # Deno install failed -> False (was previously always True, a bug).
             assert asyncio.run(ensure_deno(["spotdl"])) is False
 
@@ -204,12 +217,16 @@ class TestEnsureDeno:
         monkeypatch.setattr("shutil.which", lambda name: None)
         monkeypatch.setenv("HOME", str(tmp_path))
         monkeypatch.setenv("USERPROFILE", str(tmp_path))
-        monkeypatch.setattr("os.path.expanduser", lambda path: str(tmp_path) if path == "~" else path)
+        monkeypatch.setattr(
+            "os.path.expanduser", lambda path: str(tmp_path) if path == "~" else path
+        )
 
         async def failing_create_subprocess_exec(*args: str, **kwargs: Any) -> None:
             raise OSError("permission denied")
 
-        with patch("asyncio.create_subprocess_exec", side_effect=failing_create_subprocess_exec):
+        with patch(
+            "asyncio.create_subprocess_exec", side_effect=failing_create_subprocess_exec
+        ):
             assert asyncio.run(ensure_deno(["spotdl"])) is False
 
 

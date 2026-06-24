@@ -28,4 +28,6 @@ class TestCreateMinimalIco:
         _create_minimal_ico(str(icon_path))
         with open(icon_path, "rb") as f:
             data = f.read()
-        assert len(data) == 6 + 16 + 40 + 4  # header + ICONDIRENTRY + BITMAPINFO + pixel
+        assert (
+            len(data) == 6 + 16 + 40 + 4
+        )  # header + ICONDIRENTRY + BITMAPINFO + pixel

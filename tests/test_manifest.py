@@ -38,6 +38,7 @@ def fake_track_factory(tmp_path: Path) -> Callable[..., LocalTrack]:
             bitrate=bitrate,
             size=size,
         )
+
     return _factory
 
 
@@ -106,7 +107,9 @@ class TestGroupDuplicates:
         groups = group_duplicates(tracks)
         assert len(groups) == 0
 
-    def test_same_normalized_filename(self, fake_track_factory: Callable[..., LocalTrack]) -> None:
+    def test_same_normalized_filename(
+        self, fake_track_factory: Callable[..., LocalTrack]
+    ) -> None:
         tracks = [
             fake_track_factory("My Song", subdir="a"),
             fake_track_factory("My Song", subdir="b"),
@@ -117,7 +120,9 @@ class TestGroupDuplicates:
         assert len(safe_groups) == 1
         assert safe_groups[0].reason == "same normalized filename"
 
-    def test_metadata_title_artist_match(self, fake_track_factory: Callable[..., LocalTrack]) -> None:
+    def test_metadata_title_artist_match(
+        self, fake_track_factory: Callable[..., LocalTrack]
+    ) -> None:
         tracks = [
             fake_track_factory("file-a", title="Hello", artist="World", subdir="a"),
             fake_track_factory("file-b", title="Hello", artist="World", subdir="b"),
@@ -127,7 +132,9 @@ class TestGroupDuplicates:
         assert groups[0].reason == "possible metadata title/artist"
         assert groups[0].safe_to_move is False
 
-    def test_mixed_groups_sorted_safe_first(self, fake_track_factory: Callable[..., LocalTrack]) -> None:
+    def test_mixed_groups_sorted_safe_first(
+        self, fake_track_factory: Callable[..., LocalTrack]
+    ) -> None:
         tracks = [
             fake_track_factory("A Song", title="A Song", artist="X", subdir="a1"),
             fake_track_factory("A Song", title="A Song", artist="X", subdir="a2"),
@@ -144,7 +151,9 @@ class TestGroupDuplicates:
 
 
 class TestSummarizeScan:
-    def test_summary_counts(self, fake_track_factory: Callable[..., LocalTrack]) -> None:
+    def test_summary_counts(
+        self, fake_track_factory: Callable[..., LocalTrack]
+    ) -> None:
         tracks = [
             fake_track_factory("a", bitrate=320, size=5000),
             fake_track_factory("b", bitrate=128, size=2000),

@@ -277,9 +277,7 @@ class SpotifyDownloaderGUI(ctk.CTk):
         if not self._failed_tracks:
             self._log_frame.write("No failed tracks to retry.")
             return
-        output_folder = (
-            self._home_frame.output_entry.get().strip() or "./downloads"
-        )
+        output_folder = self._home_frame.output_entry.get().strip() or "./downloads"
         if self._worker is None:
             self._worker = SpotDLWorker(
                 self._settings,
@@ -361,9 +359,7 @@ class SpotifyDownloaderGUI(ctk.CTk):
     @staticmethod
     def _is_valid_url(url: str) -> bool:
         if url.startswith("https://open.spotify.com/playlist/"):
-            playlist_id = url[len("https://open.spotify.com/playlist/") :].split("?")[
-                0
-            ]
+            playlist_id = url[len("https://open.spotify.com/playlist/") :].split("?")[0]
             return bool(_VALID_PLAYLIST_ID_RE.match(playlist_id))
         if url.startswith("spotify:playlist:"):
             playlist_id = url[len("spotify:playlist:") :]

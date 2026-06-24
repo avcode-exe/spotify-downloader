@@ -55,7 +55,10 @@ class TestLocalTrack:
             modified=2000.0,
         )
         tracks = [low, high]
-        assert sorted(tracks, key=lambda t: t.quality_score, reverse=True) == [high, low]
+        assert sorted(tracks, key=lambda t: t.quality_score, reverse=True) == [
+            high,
+            low,
+        ]
 
     def test_defaults(self, tmp_path: Path) -> None:
         p = tmp_path / "x.mp3"

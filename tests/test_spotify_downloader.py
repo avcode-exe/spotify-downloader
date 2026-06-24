@@ -18,52 +18,69 @@ class TestIsValidUrl:
     VALID_ID = "ABCDEFGHIJKLMNOPQRSTUV"  # 22 chars
 
     def test_accepts_valid_http_url(self) -> None:
-        assert SpotifyDownloader._is_valid_url(
-            f"https://open.spotify.com/playlist/{self.VALID_ID}"
-        ) is True
+        assert (
+            SpotifyDownloader._is_valid_url(
+                f"https://open.spotify.com/playlist/{self.VALID_ID}"
+            )
+            is True
+        )
 
     def test_rejects_short_id(self) -> None:
-        assert SpotifyDownloader._is_valid_url(
-            "https://open.spotify.com/playlist/short"
-        ) is False
+        assert (
+            SpotifyDownloader._is_valid_url("https://open.spotify.com/playlist/short")
+            is False
+        )
 
     def test_rejects_invalid_chars(self) -> None:
-        assert SpotifyDownloader._is_valid_url(
-            "https://open.spotify.com/playlist/!!!invalid!!!"
-        ) is False
+        assert (
+            SpotifyDownloader._is_valid_url(
+                "https://open.spotify.com/playlist/!!!invalid!!!"
+            )
+            is False
+        )
 
     def test_accepts_valid_spotify_uri(self) -> None:
-        assert SpotifyDownloader._is_valid_url(
-            f"spotify:playlist:{self.VALID_ID}"
-        ) is True
+        assert (
+            SpotifyDownloader._is_valid_url(f"spotify:playlist:{self.VALID_ID}") is True
+        )
 
     def test_rejects_invalid_uri_id(self) -> None:
-        assert SpotifyDownloader._is_valid_url(
-            "spotify:playlist:short"
-        ) is False
+        assert SpotifyDownloader._is_valid_url("spotify:playlist:short") is False
 
     def test_rejects_track_url(self) -> None:
-        assert SpotifyDownloader._is_valid_url(
-            f"https://open.spotify.com/track/{self.VALID_ID}"
-        ) is False
+        assert (
+            SpotifyDownloader._is_valid_url(
+                f"https://open.spotify.com/track/{self.VALID_ID}"
+            )
+            is False
+        )
 
     def test_rejects_album_url(self) -> None:
-        assert SpotifyDownloader._is_valid_url(
-            f"https://open.spotify.com/album/{self.VALID_ID}"
-        ) is False
+        assert (
+            SpotifyDownloader._is_valid_url(
+                f"https://open.spotify.com/album/{self.VALID_ID}"
+            )
+            is False
+        )
 
     def test_empty_string_rejected(self) -> None:
         assert SpotifyDownloader._is_valid_url("") is False
 
     def test_query_string_stripped(self) -> None:
-        assert SpotifyDownloader._is_valid_url(
-            f"https://open.spotify.com/playlist/{self.VALID_ID}?si=123"
-        ) is True
+        assert (
+            SpotifyDownloader._is_valid_url(
+                f"https://open.spotify.com/playlist/{self.VALID_ID}?si=123"
+            )
+            is True
+        )
 
     def test_lower_and_upper_case_ids(self) -> None:
-        assert SpotifyDownloader._is_valid_url(
-            f"https://open.spotify.com/playlist/{self.VALID_ID.lower()}"
-        ) is True
+        assert (
+            SpotifyDownloader._is_valid_url(
+                f"https://open.spotify.com/playlist/{self.VALID_ID.lower()}"
+            )
+            is True
+        )
 
 
 class TestIsValidProxy:
@@ -86,12 +103,7 @@ class TestIsValidProxy:
         assert SpotifyDownloader._is_valid_proxy("ftp://proxy:21") is False
 
     def test_accepts_authenticated(self) -> None:
-        assert (
-            SpotifyDownloader._is_valid_proxy(
-                "http://user:pass@proxy:8080"
-            )
-            is True
-        )
+        assert SpotifyDownloader._is_valid_proxy("http://user:pass@proxy:8080") is True
 
 
 class TestFormatElapsed:

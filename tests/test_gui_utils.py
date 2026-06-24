@@ -136,6 +136,7 @@ class TestSafePathName:
 
     def test_expands_user(self, tmp_path: Path) -> None:
         import os
+
         os.makedirs(tmp_path / "sub")
         (tmp_path / "sub" / "file.mp3").write_text("x")
         result = safe_path_name(str(tmp_path / "sub" / "file.mp3"))
