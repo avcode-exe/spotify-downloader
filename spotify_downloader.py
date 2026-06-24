@@ -134,6 +134,7 @@ _VALID_PLAYLIST_ID_RE = re.compile(r"^[A-Za-z0-9]{22}$")
 
 
 def _setup_logger() -> logging.Logger:
+    ensure_data_dir(LOG_FILE)
     os.makedirs(LOG_DIR, exist_ok=True)
     logger = logging.getLogger("spotify_downloader")
     logger.setLevel(logging.DEBUG)
@@ -153,6 +154,10 @@ def _setup_logger() -> logging.Logger:
         )
     )
     logger.addHandler(handler)
+    try:
+        os.chmod(LOG_FILE, 0o600)
+    except OSError:
+        pass
     return logger
 
 
@@ -1204,7 +1209,8 @@ class SpotifyDownloader(App):
             resp = await loop.run_in_executor(
                 None, lambda: urllib.request.urlopen(req, timeout=8)
             )
-            data = json.loads(resp.read().decode())
+            with resp:
+                data = json.loads(resp.read().decode())
             return data["info"]["version"]
         except Exception as exc:
             log.debug("Version check failed for %s | error=%s", package_name, exc)

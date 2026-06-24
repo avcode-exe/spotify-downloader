@@ -79,9 +79,10 @@ class TestSummarizeLocalScan:
             title="Song",
             artist="Artist",
         )
-        result = summarize_local_scan([track], [])
+        result = summarize_local_scan([track], [], [])
         assert result["files"] == 1
         assert result["unique_tracks"] == 1
+        assert result["downloaded"] == 0
 
 
 class TestFormatTrackLine:

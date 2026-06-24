@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from typing import Any
 
 from src.models import DuplicateGroup, LocalTrack
 from src.state import summarize_track_state
@@ -45,12 +46,14 @@ def format_download_status(done: int, total: int, elapsed: float) -> str:
 
 
 def summarize_local_scan(
-    tracks: list[LocalTrack], duplicate_groups: list[DuplicateGroup]
+    tracks: list[LocalTrack],
+    duplicate_groups: list[DuplicateGroup],
+    track_state: list[dict[str, Any]],
 ) -> dict[str, int]:
     from src.manifest import summarize_scan
 
     scan_summary = summarize_scan(tracks, duplicate_groups)
-    state_summary = summarize_track_state([])
+    state_summary = summarize_track_state(track_state)
     return {**scan_summary, **state_summary}
 
 

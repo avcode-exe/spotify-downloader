@@ -145,6 +145,7 @@ def update_paths_from_scan(state: list[dict[str, Any]], tracks: list[Any]) -> No
         key = str(entry.get("key", "")).strip().lower()
         if key:
             index[key] = entry
+    now = datetime.now(timezone.utc).isoformat()
     for track in tracks:
         key = (
             getattr(track, "normalized_name", None)
@@ -156,12 +157,28 @@ def update_paths_from_scan(state: list[dict[str, Any]], tracks: list[Any]) -> No
             current_status = existing.get("status")
             if current_status in {TrackStatus.FAILED, TrackStatus.QUARANTINED}:
                 continue
-        upsert_track_state(
-            state,
-            key=str(key),
-            title=getattr(track, "title", None),
-            artist=getattr(track, "artist", None),
-            status=TrackStatus.DOWNLOADED,
-            path=str(getattr(track, "path")),
-            source="local-scan",
-        )
+            existing.update(
+                {
+                    "title": getattr(track, "title", None) or existing.get("title"),
+                    "artist": getattr(track, "artist", None) or existing.get("artist"),
+                    "status": TrackStatus.DOWNLOADED,
+                    "path": str(getattr(track, "path")),
+                    "source": "local-scan",
+                    "updated_at": now,
+                }
+            )
+            existing.setdefault("first_seen", now)
+        else:
+            new_entry: dict[str, Any] = {
+                "key": key_str,
+                "title": getattr(track, "title", None),
+                "artist": getattr(track, "artist", None),
+                "status": TrackStatus.DOWNLOADED,
+                "path": str(getattr(track, "path")),
+                "source": "local-scan",
+                "first_seen": now,
+                "updated_at": now,
+            }
+            state.append(new_entry)
+            index[key_str] = new_entry
+    del state[1000:]

@@ -89,10 +89,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Compile check
-        run: |
-          python -m py_compile spotify_downloader.py gui_app.py installer.py
-          python -m py_compile src/manifest.py src/models.py src/spotdl_tools.py src/state.py src/duplicates.py
-          python -m py_compile src/gui/__init__.py src/gui/app.py src/gui/duplicates_frame.py src/gui/history_frame.py src/gui/home_frame.py src/gui/log_frame.py src/gui/preview_frame.py src/gui/settings_frame.py src/gui/theme.py src/gui/utils.py src/gui/workers.py
+        run: python -m compileall -q spotify_downloader.py gui_app.py installer.py src/
 
   validate:
     name: Validate on ${{ matrix.os }}

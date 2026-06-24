@@ -251,8 +251,13 @@ class _FakeStream:
     async def readline(self) -> bytes:
         if self._index >= len(self._data):
             return b""
-        chunk = self._data[self._index : self._index + 1]
-        self._index += 1
+        end = self._data.find(b"\n", self._index)
+        if end == -1:
+            chunk = self._data[self._index :]
+            self._index = len(self._data)
+            return chunk
+        chunk = self._data[self._index : end + 1]
+        self._index = end + 1
         return chunk
 
     def read(self) -> bytes:

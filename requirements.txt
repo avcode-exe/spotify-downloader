@@ -2,3 +2,4 @@ customtkinter>=5.2.0
 textual>=2.0.0
 spotdl>=4.5.0
 mutagen>=1.45.0
+packaging>=24.0

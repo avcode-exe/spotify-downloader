@@ -159,7 +159,7 @@ class TestSpotDLWorkerRecordFailedTrack:
         events: list[WorkerResult] = []
         worker._on_event = events.append
         worker._record_failed_track(
-            "Failed to download https://open.spotify.com/track/abc123", "/out"
+            "Failed to download https://open.spotify.com/track/abc123"
         )
         assert any(
             r.kind == "failed"
@@ -171,14 +171,14 @@ class TestSpotDLWorkerRecordFailedTrack:
         assert state[0]["status"] == "failed"
 
     def test_extracts_track_name(self, worker: SpotDLWorker) -> None:
-        worker._record_failed_track("Failed to download  My Song", "/out")
+        worker._record_failed_track("Failed to download  My Song")
         state = worker._track_state
         assert state[0]["key"] == "my song"
         assert state[0]["status"] == "failed"
 
     def test_no_match_leaves_state_unchanged(self, worker: SpotDLWorker) -> None:
         before = len(worker._track_state)
-        worker._record_failed_track("Some random error", "/out")
+        worker._record_failed_track("Some random error")
         assert len(worker._track_state) == before
 
 

@@ -6,12 +6,10 @@ import os
 import re
 import time
 from dataclasses import dataclass
-from pathlib import Path
 from threading import Thread
 from typing import Any, Callable
 
-from src.duplicates import quarantine_duplicate_copies
-from src.manifest import group_duplicates, normalize_name, scan_output_folder
+from src.manifest import normalize_name
 from src.models import TrackStatus
 from src.spotdl_tools import (
     DONE_RE,
@@ -28,7 +26,6 @@ from src.spotdl_tools import (
 from src.state import (
     load_track_state,
     save_track_state,
-    summarize_track_state,
     upsert_track_state,
 )
 
@@ -39,7 +36,7 @@ _RATE_LIMIT_HINT = (
     "in Settings to reduce failures."
 )
 _COMPLETE_TIP = "Tip: Some tracks failed. Try updating: pip install -U spotdl yt-dlp"
-_RETRY_HINT = "{failed} track(s) failed. Press Retry Failed to try again."
+_RETRY_HINT = "{failed} track(s) failed. Press 🔄 Retry Failed to try again."
 
 
 @dataclass
@@ -248,9 +245,7 @@ class SpotDLWorker:
                         skipped += 1
                         pending_done = True
                         self._emit("track", {"track": track_name})
-                        self._record_completed_track(
-                            track_name, output_folder, TrackStatus.SKIPPED
-                        )
+                        self._record_completed_track(track_name, TrackStatus.SKIPPED)
                         self._emit(
                             "log", {"message": f"⏭ Skipped (duplicate): {track_name}"}
                         )
@@ -266,9 +261,7 @@ class SpotDLWorker:
                         downloaded += 1
                         pending_done = True
                         self._emit("track", {"track": track_name})
-                        self._record_completed_track(
-                            track_name, output_folder, TrackStatus.DOWNLOADED
-                        )
+                        self._record_completed_track(track_name, TrackStatus.DOWNLOADED)
                         continue
 
                     if pending_done:
@@ -312,7 +305,7 @@ class SpotDLWorker:
 
                     if ERROR_RE.search(text):
                         failed += 1
-                        self._record_failed_track(text, output_folder)
+                        self._record_failed_track(text)
                         self._emit("log", {"message": f"✗ {text}"})
                         if not rate_limit_hint_shown and is_rate_limit_error(text):
                             rate_limit_hint_shown = True
@@ -429,9 +422,7 @@ class SpotDLWorker:
                 log.error("Could not save track state | error=%s", exc)
             loop.close()
 
-    def _record_completed_track(
-        self, track_name: str, output_folder: str, status: str
-    ) -> None:
+    def _record_completed_track(self, track_name: str, status: str) -> None:
         key = normalize_name(track_name)
         upsert_track_state(
             self._track_state,
@@ -456,7 +447,7 @@ class SpotDLWorker:
         except Exception:
             pass
 
-    def _record_failed_track(self, text: str, output_folder: str) -> None:
+    def _record_failed_track(self, text: str) -> None:
         track_url_m = re.search(
             r"(https?://open\.spotify\.com/track/[A-Za-z0-9]+)", text
         )
@@ -487,41 +478,4 @@ class SpotDLWorker:
                 error=text,
             )
 
-    def refresh_preview(self) -> dict[str, Any]:
-        self._last_scan = scan_output_folder(self._output_folder)
-        self._scan_index = {t.normalized_name: t for t in self._last_scan}
-        duplicate_groups = group_duplicates(self._last_scan)
-        return {
-            "tracks": self._last_scan,
-            "duplicate_groups": duplicate_groups,
-            "state_summary": summarize_track_state(self._track_state),
-        }
-
-    def move_duplicates(self) -> tuple[int, Path]:
-        self._last_scan = scan_output_folder(self._output_folder)
-        self._scan_index = {t.normalized_name: t for t in self._last_scan}
-        duplicate_groups = group_duplicates(self._last_scan)
-        duplicate_groups = [
-            group for group in duplicate_groups if group.safe_to_move and group.copies
-        ]
-        if not duplicate_groups:
-            return 0, Path(self._output_folder) / "duplicates"
-
-        count, destination = quarantine_duplicate_copies(
-            duplicate_groups, self._output_folder
-        )
-        for group in duplicate_groups:
-            for track in group.copies:
-                if not track.path.exists():
-                    continue
-                upsert_track_state(
-                    self._track_state,
-                    key=track.normalized_name,
-                    title=track.title,
-                    artist=track.artist,
-                    status=TrackStatus.QUARANTINED,
-                    path=str(track.path),
-                    source="duplicate-cleaner",
-                )
-        save_track_state(self._track_state)
-        return count, destination
+            save_track_state(self._track_state)

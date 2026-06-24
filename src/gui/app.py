@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import importlib.metadata
 import json
 import os
 import re
 import time
+import urllib.request
+from threading import Thread
 from typing import Any
 
 import customtkinter as ctk
@@ -374,5 +377,41 @@ class SpotifyDownloaderGUI(ctk.CTk):
                 thread.join(timeout=5)
         self.destroy()
 
+    _CHECKED_PACKAGES: list[tuple[str, str]] = [
+        ("spotdl", "spotdl"),
+        ("yt-dlp", "yt-dlp"),
+        ("mutagen", "mutagen"),
+    ]
+
     def _check_dependency_updates(self) -> None:
-        self._log_frame.write("✓ Ready")
+        def _check() -> None:
+            updates: list[str] = []
+            for display_name, pkg_name in self._CHECKED_PACKAGES:
+                try:
+                    installed = importlib.metadata.version(pkg_name)
+                except importlib.metadata.PackageNotFoundError:
+                    continue
+                try:
+                    req = urllib.request.Request(
+                        f"https://pypi.org/pypi/{pkg_name}/json",
+                        headers={"Accept": "application/json"},
+                    )
+                    with urllib.request.urlopen(req, timeout=8) as resp:
+                        data = json.loads(resp.read().decode())
+                    latest = data["info"]["version"]
+                    if latest > installed:
+                        updates.append(f"{display_name} {installed} → {latest}")
+                except Exception:
+                    pass
+            if updates:
+                pkgs = " ".join(pkg for _, pkg in self._CHECKED_PACKAGES)
+                msg = (
+                    "Updates available:\n"
+                    + "\n".join(f"   • {u}" for u in updates)
+                    + f"\n   Run: pip install -U {pkgs}"
+                )
+            else:
+                msg = "✓ Ready"
+            self.after(0, self._log_frame.write, msg)
+
+        Thread(target=_check, daemon=True).start()
