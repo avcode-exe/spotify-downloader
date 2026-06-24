@@ -8,11 +8,28 @@ import shutil
 import sys
 
 
+_SPOTIFY_ID_RE = re.compile(r"^[A-Za-z0-9]{22}$")
 DOWNLOADING_RE = re.compile(r"Downloading\s+(.+)", re.IGNORECASE)
 DONE_RE = re.compile(r"(?:Downloaded|✓)\s+(.+)", re.IGNORECASE)
 SKIPPED_RE = re.compile(r"Skipping\s+(.+)\s+as it is already downloaded", re.IGNORECASE)
 ERROR_RE = re.compile(r"(?:AudioProviderError|Failed to download)", re.IGNORECASE)
 FOUND_RE = re.compile(r"Found\s+(\d+)\s+songs", re.IGNORECASE)
+
+
+def is_valid_spotify_url(url: str) -> bool:
+    if url.startswith("https://open.spotify.com/playlist/"):
+        playlist_id = url[len("https://open.spotify.com/playlist/") :].split("?")[0]
+        return bool(_SPOTIFY_ID_RE.match(playlist_id))
+    if url.startswith("https://open.spotify.com/track/"):
+        track_id = url[len("https://open.spotify.com/track/") :].split("?")[0]
+        return bool(_SPOTIFY_ID_RE.match(track_id))
+    if url.startswith("spotify:playlist:"):
+        playlist_id = url[len("spotify:playlist:") :]
+        return bool(_SPOTIFY_ID_RE.match(playlist_id))
+    if url.startswith("spotify:track:"):
+        track_id = url[len("spotify:track:") :]
+        return bool(_SPOTIFY_ID_RE.match(track_id))
+    return False
 
 
 def find_spotdl() -> list[str]:

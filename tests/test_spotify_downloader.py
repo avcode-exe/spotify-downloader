@@ -47,13 +47,16 @@ class TestIsValidUrl:
     def test_rejects_invalid_uri_id(self) -> None:
         assert SpotifyDownloader._is_valid_url("spotify:playlist:short") is False
 
-    def test_rejects_track_url(self) -> None:
+    def test_accepts_track_http_url(self) -> None:
         assert (
             SpotifyDownloader._is_valid_url(
                 f"https://open.spotify.com/track/{self.VALID_ID}"
             )
-            is False
+            is True
         )
+
+    def test_accepts_track_uri(self) -> None:
+        assert SpotifyDownloader._is_valid_url(f"spotify:track:{self.VALID_ID}") is True
 
     def test_rejects_album_url(self) -> None:
         assert (

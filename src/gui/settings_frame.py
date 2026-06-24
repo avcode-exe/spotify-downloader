@@ -29,7 +29,7 @@ BROWSER_OPTIONS = [
     "vivaldi",
 ]
 
-_DUPLICATE_POLICY_MAP = dict(DUPLICATE_POLICY_OPTIONS)
+_DUPLICATE_POLICY_MAP = {code: label for label, code in DUPLICATE_POLICY_OPTIONS}
 
 
 class SettingsFrame(ctk.CTkFrame):

@@ -105,6 +105,12 @@ class SpotDLWorker:
             if batch:
                 self._emit("log", {"message": batch})
 
+    def _flush_logs(self) -> None:
+        if self._log_buffer:
+            batch = "\n".join(self._log_buffer)
+            self._log_buffer.clear()
+            self._emit("log", {"message": batch})
+
     def _run_download(self, url: str, fresh: bool) -> None:
         try:
             self._log_buffer.append(f"▶ Starting download: {url}")
@@ -145,6 +151,8 @@ class SpotDLWorker:
             self._emit("done", data={"url": url, "output_folder": self._output_folder})
         except Exception as exc:
             self._emit("error", error=str(exc))
+        finally:
+            self._flush_logs()
 
     def _run_retry(self, track_urls: list[str]) -> None:
         try:
@@ -187,6 +195,8 @@ class SpotDLWorker:
             self._emit("done", data={"url": "", "output_folder": self._output_folder})
         except Exception as exc:
             self._emit("error", error=str(exc))
+        finally:
+            self._flush_logs()
 
     def _run_spotdl(
         self, cmd: list[str], url: str = "", output_folder: str = ""
@@ -199,8 +209,6 @@ class SpotDLWorker:
         pending_done = False
         in_traceback = False
         rate_limit_hint_shown = False
-        self._log_buffer.clear()
-        self._last_flush = time.monotonic()
 
         sub_env = dict(os.environ)
         sub_env["PYTHONIOENCODING"] = "utf-8"

@@ -34,6 +34,7 @@ from src.manifest import (
     summarize_scan,
 )
 from src.models import DUPLICATE_POLICY_OPTIONS, LocalTrack, TrackStatus
+from src.spotdl_tools import is_valid_spotify_url
 from src.spotdl_tools import (
     DONE_RE,
     DOWNLOADING_RE,
@@ -125,12 +126,12 @@ NOISE_RE = re.compile(
 )
 
 _SPOTDL_URL_ERROR = (
-    "[bold red]✗[/] Invalid URL. Must be a Spotify playlist URL starting with "
-    "[cyan]https://open.spotify.com/playlist/[base62id][/] or "
-    "[cyan]spotify:playlist:base62id[/]"
+    "[bold red]✗[/] Invalid URL. Must be a Spotify playlist or track URL starting with "
+    "[cyan]https://open.spotify.com/playlist/[base62id][/], "
+    "[cyan]https://open.spotify.com/track/[base62id][/], "
+    "[cyan]spotify:playlist:base62id[/], or "
+    "[cyan]spotify:track:base62id[/]"
 )
-
-_VALID_PLAYLIST_ID_RE = re.compile(r"^[A-Za-z0-9]{22}$")
 
 
 def _setup_logger() -> logging.Logger:
@@ -713,7 +714,8 @@ class SpotifyDownloader(App):
             with Container(id="header-section"):
                 yield Label("🎵  Spotify Playlist Downloader", id="app-title")
                 yield Label(
-                    "Paste a public playlist URL and press Download", id="app-subtitle"
+                    "Paste a public playlist or track URL and press Download",
+                    id="app-subtitle",
                 )
 
             with Container(id="input-section"):
@@ -1250,13 +1252,7 @@ class SpotifyDownloader(App):
 
     @staticmethod
     def _is_valid_url(url: str) -> bool:
-        if url.startswith("https://open.spotify.com/playlist/"):
-            playlist_id = url[len("https://open.spotify.com/playlist/") :].split("?")[0]
-            return bool(_VALID_PLAYLIST_ID_RE.match(playlist_id))
-        if url.startswith("spotify:playlist:"):
-            playlist_id = url[len("spotify:playlist:") :]
-            return bool(_VALID_PLAYLIST_ID_RE.match(playlist_id))
-        return False
+        return is_valid_spotify_url(url)
 
     @staticmethod
     def _is_valid_proxy(proxy: str) -> bool:

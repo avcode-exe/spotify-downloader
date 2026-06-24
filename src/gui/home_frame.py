@@ -74,7 +74,7 @@ class HomeFrame(ctk.CTkFrame):
 
         self.url_entry = ctk.CTkEntry(
             input_card,
-            placeholder_text="https://open.spotify.com/playlist/...",
+            placeholder_text="https://open.spotify.com/playlist/... or /track/...",
             height=40,
             font=FONT_BUTTON,
             corner_radius=6,

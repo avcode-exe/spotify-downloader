@@ -3,7 +3,6 @@ from __future__ import annotations
 import importlib.metadata
 import json
 import os
-import re
 import time
 import urllib.request
 from packaging.version import parse as parse_version
@@ -13,6 +12,7 @@ from typing import Any
 import customtkinter as ctk
 
 from src.manifest import group_duplicates, scan_output_folder
+from src.spotdl_tools import is_valid_spotify_url
 from src.state import (
     HISTORY_FILE,
     SETTINGS_FILE,
@@ -29,9 +29,6 @@ from .log_frame import LogFrame
 from .preview_frame import PreviewFrame
 from .settings_frame import SettingsFrame
 from .workers import SpotDLWorker, WorkerResult
-
-
-_VALID_PLAYLIST_ID_RE = re.compile(r"^[A-Za-z0-9]{22}$")
 
 
 class SpotifyDownloaderGUI(ctk.CTk):
@@ -243,11 +240,12 @@ class SpotifyDownloaderGUI(ctk.CTk):
 
     def _on_download(self) -> None:
         url = self._home_frame.url_entry.get().strip()
-        if not url or not self._is_valid_url(url):
+        if not url or not is_valid_spotify_url(url):
             self._log_frame.write(
-                "Invalid URL. Must be a Spotify playlist URL: "
-                "https://open.spotify.com/playlist/<22-char-id> or "
-                "spotify:playlist:<22-char-id>"
+                "Invalid URL. Must be a Spotify playlist or track URL: "
+                "https://open.spotify.com/playlist/<id>, "
+                "https://open.spotify.com/track/<id>, "
+                "spotify:playlist:<id>, or spotify:track:<id>"
             )
             return
         self._check_cookie_file()
@@ -256,11 +254,12 @@ class SpotifyDownloaderGUI(ctk.CTk):
 
     def _on_fresh(self) -> None:
         url = self._home_frame.url_entry.get().strip()
-        if not url or not self._is_valid_url(url):
+        if not url or not is_valid_spotify_url(url):
             self._log_frame.write(
-                "Invalid URL. Must be a Spotify playlist URL: "
-                "https://open.spotify.com/playlist/<22-char-id> or "
-                "spotify:playlist:<22-char-id>"
+                "Invalid URL. Must be a Spotify playlist or track URL: "
+                "https://open.spotify.com/playlist/<id>, "
+                "https://open.spotify.com/track/<id>, "
+                "spotify:playlist:<id>, or spotify:track:<id>"
             )
             return
         self._check_cookie_file()
@@ -362,13 +361,7 @@ class SpotifyDownloaderGUI(ctk.CTk):
 
     @staticmethod
     def _is_valid_url(url: str) -> bool:
-        if url.startswith("https://open.spotify.com/playlist/"):
-            playlist_id = url[len("https://open.spotify.com/playlist/") :].split("?")[0]
-            return bool(_VALID_PLAYLIST_ID_RE.match(playlist_id))
-        if url.startswith("spotify:playlist:"):
-            playlist_id = url[len("spotify:playlist:") :]
-            return bool(_VALID_PLAYLIST_ID_RE.match(playlist_id))
-        return False
+        return is_valid_spotify_url(url)
 
     def _on_close(self) -> None:
         if self._worker is not None:
