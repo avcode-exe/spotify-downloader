@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 import re
 import time
@@ -11,7 +12,13 @@ from typing import Any, Callable
 
 from src.duplicates import quarantine_duplicate_copies
 from src.manifest import group_duplicates, normalize_name, scan_output_folder
+from src.models import TrackStatus
 from src.spotdl_tools import (
+    DONE_RE,
+    DOWNLOADING_RE,
+    ERROR_RE,
+    FOUND_RE,
+    SKIPPED_RE,
     build_spotdl_args,
     ensure_deno,
     find_spotdl,
@@ -27,12 +34,12 @@ from src.state import (
 
 from .utils import format_download_status, format_elapsed, strip_ansi
 
-
-DOWNLOADING_RE = re.compile(r"Downloading\s+(.+)", re.IGNORECASE)
-DONE_RE = re.compile(r"(?:Downloaded|✓)\s+(.+)", re.IGNORECASE)
-SKIPPED_RE = re.compile(r"Skipping\s+(.+)\s+as it is already downloaded", re.IGNORECASE)
-ERROR_RE = re.compile(r"(?:AudioProviderError|Failed to download)", re.IGNORECASE)
-FOUND_RE = re.compile(r"Found\s+(\d+)\s+songs", re.IGNORECASE)
+_RATE_LIMIT_HINT = (
+    "This may be YouTube rate limiting. Try setting a cookie file "
+    "in Settings to reduce failures."
+)
+_COMPLETE_TIP = "Tip: Some tracks failed. Try updating: pip install -U spotdl yt-dlp"
+_RETRY_HINT = "{failed} track(s) failed. Press Retry Failed to try again."
 
 
 @dataclass
@@ -56,15 +63,25 @@ class SpotDLWorker:
         self._tk_root = tk_root
         self._process: asyncio.subprocess.Process | None = None
         self._cancel_requested = False
-        self._failed_tracks: list[str] = []
         self._track_state = load_track_state()
         self._last_scan: list[Any] = []
+        # O(1) lookup index of the last scan, keyed by normalized track name.
+        # Rebuilt whenever `_last_scan` is refreshed.
+        self._scan_index: dict[str, Any] = {}
+        self._thread: Thread | None = None
 
     def start_download(self, url: str, fresh: bool = False) -> None:
-        Thread(target=self._run_download, args=(url, fresh), daemon=True).start()
+        self._thread = Thread(target=self._run_download, args=(url, fresh))
+        self._thread.start()
 
-    def start_retry(self) -> None:
-        Thread(target=self._run_retry, daemon=True).start()
+    def start_retry(self, track_urls: list[str]) -> None:
+        """Retry a specific list of failed track URLs (owned by the caller).
+
+        The controller, not the worker, owns the failed-track list so retry
+        keeps working even when a fresh worker is created for a new download.
+        """
+        self._thread = Thread(target=self._run_retry, args=(list(track_urls),))
+        self._thread.start()
 
     def cancel(self) -> None:
         self._cancel_requested = True
@@ -89,17 +106,20 @@ class SpotDLWorker:
             )
 
             spotdl_cmd = find_spotdl()
-            if spotdl_cmd is None:
-                self._emit("error", error="spotDL not found")
-                return
-
             if not asyncio.run(validate_spotdl(spotdl_cmd)):
                 self._emit("error", error="spotDL is not installed")
                 return
 
+            # Deno is optional (only needed for some age-restricted videos); a
+            # failed install should warn, not abort the whole download.
             if not asyncio.run(ensure_deno(spotdl_cmd)):
-                self._emit("error", error="Deno installation failed")
-                return
+                self._emit(
+                    "log",
+                    {
+                        "message": "⚠ Deno could not be installed. "
+                        "Age-restricted videos may fail; most downloads still work."
+                    },
+                )
 
             os.makedirs(self._output_folder, exist_ok=True)
 
@@ -124,7 +144,7 @@ class SpotDLWorker:
         except Exception as exc:
             self._emit("error", error=str(exc))
 
-    def _run_retry(self) -> None:
+    def _run_retry(self, track_urls: list[str]) -> None:
         try:
             self._emit("log", {"message": "🔄 Retrying failed tracks…"})
             self._emit(
@@ -133,21 +153,26 @@ class SpotDLWorker:
             )
 
             spotdl_cmd = find_spotdl()
-            if spotdl_cmd is None:
-                self._emit("error", error="spotDL not found")
-                return
-
             if not asyncio.run(validate_spotdl(spotdl_cmd)):
                 self._emit("error", error="spotDL is not installed")
                 return
 
             if not asyncio.run(ensure_deno(spotdl_cmd)):
-                self._emit("error", error="Deno installation failed")
-                return
+                self._emit(
+                    "log",
+                    {
+                        "message": "⚠ Deno could not be installed. "
+                        "Age-restricted videos may fail; most downloads still work."
+                    },
+                )
 
             os.makedirs(self._output_folder, exist_ok=True)
-            track_urls = list(self._failed_tracks)
-            self._failed_tracks.clear()
+            if not track_urls:
+                self._emit("log", {"message": "No failed tracks to retry."})
+                self._emit(
+                    "done", data={"url": "", "output_folder": self._output_folder}
+                )
+                return
 
             cmd = build_spotdl_args(
                 spotdl_cmd,
@@ -224,7 +249,7 @@ class SpotDLWorker:
                         pending_done = True
                         self._emit("track", {"track": track_name})
                         self._record_completed_track(
-                            track_name, output_folder, "skipped"
+                            track_name, output_folder, TrackStatus.SKIPPED
                         )
                         self._emit(
                             "log", {"message": f"⏭ Skipped (duplicate): {track_name}"}
@@ -242,7 +267,7 @@ class SpotDLWorker:
                         pending_done = True
                         self._emit("track", {"track": track_name})
                         self._record_completed_track(
-                            track_name, output_folder, "downloaded"
+                            track_name, output_folder, TrackStatus.DOWNLOADED
                         )
                         continue
 
@@ -293,9 +318,7 @@ class SpotDLWorker:
                             rate_limit_hint_shown = True
                             self._emit(
                                 "log",
-                                {
-                                    "message": "This may be YouTube rate limiting. Try setting a cookie file in Settings to reduce failures."
-                                },
+                                {"message": _RATE_LIMIT_HINT},
                             )
                         continue
 
@@ -328,16 +351,15 @@ class SpotDLWorker:
                 self._emit(
                     "log",
                     {
-                        "message": f"\n✓ Complete! {summary} in {format_elapsed(elapsed_final)}\n   Files saved to: {output_folder}"
+                        "message": (
+                            f"\n✓ Complete! {summary} in "
+                            f"{format_elapsed(elapsed_final)}\n"
+                            f"   Files saved to: {output_folder}"
+                        )
                     },
                 )
                 if failed > 0:
-                    self._emit(
-                        "log",
-                        {
-                            "message": "Tip: Some tracks failed. Try updating: pip install -U spotdl yt-dlp"
-                        },
-                    )
+                    self._emit("log", {"message": _COMPLETE_TIP})
                 if url:
                     self._emit(
                         "history",
@@ -348,12 +370,10 @@ class SpotDLWorker:
                             "status": "completed",
                         },
                     )
-                if self._failed_tracks:
+                if failed > 0:
                     self._emit(
                         "log",
-                        {
-                            "message": f"{len(self._failed_tracks)} track(s) failed. Press Retry Failed to try again."
-                        },
+                        {"message": _RETRY_HINT.format(failed=failed)},
                     )
             else:
                 self._emit(
@@ -381,12 +401,10 @@ class SpotDLWorker:
                             "status": "failed",
                         },
                     )
-                if self._failed_tracks:
+                if failed > 0:
                     self._emit(
                         "log",
-                        {
-                            "message": f"{len(self._failed_tracks)} track(s) failed. Press Retry Failed to try again."
-                        },
+                        {"message": _RETRY_HINT.format(failed=failed)},
                     )
         except asyncio.CancelledError:
             self._emit("status", {"status": "Cancelled", "track": "—", "progress": 0.0})
@@ -404,7 +422,11 @@ class SpotDLWorker:
             self._emit("error", error=str(exc))
         finally:
             self._process = None
-            save_track_state(self._track_state)
+            try:
+                save_track_state(self._track_state)
+            except OSError as exc:
+                log = logging.getLogger("spotify_downloader")
+                log.error("Could not save track state | error=%s", exc)
             loop.close()
 
     def _record_completed_track(
@@ -419,17 +441,16 @@ class SpotDLWorker:
             source="spotdl-output",
         )
         try:
-            matches = [
-                track for track in self._last_scan if track.normalized_name == key
-            ]
-            if matches:
+            # O(1) lookup into the cached scan index instead of a linear scan.
+            match = self._scan_index.get(key)
+            if match is not None:
                 upsert_track_state(
                     self._track_state,
                     key=key,
-                    title=matches[0].title or track_name,
-                    artist=matches[0].artist,
+                    title=match.title or track_name,
+                    artist=match.artist,
                     status=status,
-                    path=str(matches[0].path),
+                    path=str(match.path),
                     source="local-scan",
                 )
         except Exception:
@@ -441,13 +462,14 @@ class SpotDLWorker:
         )
         if track_url_m:
             track_url = track_url_m.group(1)
-            if track_url not in self._failed_tracks:
-                self._failed_tracks.append(track_url)
+            # Surface the retryable URL to the controller so it can offer a
+            # Retry that survives a fresh worker (see start_retry).
+            self._emit("failed", {"url": track_url})
             upsert_track_state(
                 self._track_state,
                 key=track_url.lower(),
                 title=text,
-                status="failed",
+                status=TrackStatus.FAILED,
                 source="spotify-url",
                 error=text,
             )
@@ -460,13 +482,14 @@ class SpotDLWorker:
                 self._track_state,
                 key=key,
                 title=track_name,
-                status="failed",
+                status=TrackStatus.FAILED,
                 source="track-name",
                 error=text,
             )
 
     def refresh_preview(self) -> dict[str, Any]:
         self._last_scan = scan_output_folder(self._output_folder)
+        self._scan_index = {t.normalized_name: t for t in self._last_scan}
         duplicate_groups = group_duplicates(self._last_scan)
         return {
             "tracks": self._last_scan,
@@ -476,6 +499,7 @@ class SpotDLWorker:
 
     def move_duplicates(self) -> tuple[int, Path]:
         self._last_scan = scan_output_folder(self._output_folder)
+        self._scan_index = {t.normalized_name: t for t in self._last_scan}
         duplicate_groups = group_duplicates(self._last_scan)
         duplicate_groups = [
             group for group in duplicate_groups if group.safe_to_move and group.copies
@@ -495,7 +519,7 @@ class SpotDLWorker:
                     key=track.normalized_name,
                     title=track.title,
                     artist=track.artist,
-                    status="quarantined",
+                    status=TrackStatus.QUARANTINED,
                     path=str(track.path),
                     source="duplicate-cleaner",
                 )

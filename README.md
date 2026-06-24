@@ -21,6 +21,7 @@ YouTube Music (via [spotDL](https://github.com/spotDL/spotify-downloader)).
 - **Rate-Limit Detection** — Warns when YouTube is blocking downloads and suggests setting a cookie file
 - **Cancellation** — Cancel any in-progress download at any time
 - **Cross-Platform** — Works on Windows, macOS, and Linux
+- **198 unit tests** — Full coverage of URL validation, proxy handling, state persistence, duplicate logic, and UI utilities
 
 ## Requirements
 
@@ -276,7 +277,8 @@ To download the artifact:
 
 1. Run `python spotify_downloader.py`
 2. Paste a **public** Spotify playlist URL into the top field
-   - Example: `https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M`
+   - Valid format: `https://open.spotify.com/playlist/<22-char-id>` (e.g. `https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M`)
+   - URI format also accepted: `spotify:playlist:<22-char-id>`
 3. Choose an output folder (default: `./downloads`)
 4. Click **Download** (or **⟳ Fresh** to overwrite existing files)
 5. Watch the progress — spotDL will fetch metadata, find matching audio on
@@ -286,7 +288,8 @@ To download the artifact:
 
 1. Run `python gui_app.py`
 2. Paste a **public** Spotify playlist URL into the top field
-   - Example: `https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M`
+   - Valid format: `https://open.spotify.com/playlist/<22-char-id>` (e.g. `https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M`)
+   - URI format also accepted: `spotify:playlist:<22-char-id>`
 3. Choose an output folder (default: `./downloads`)
 4. Click **▶ Download** or **⟳ Fresh** to start
 5. Use **🔎 Preview** and **📋 Duplicates** buttons to toggle panels
@@ -327,7 +330,7 @@ Open the **⚙ Settings** panel to configure:
 | **Format** | Output format: MP3, M4A, FLAC, Opus, OGG, WAV |
 | **Bitrate** | Audio bitrate: Auto (default), 64k–320k, or disable conversion |
 | **Audio source** | Audio provider: YouTube Music (default), YouTube, SoundCloud, Bandcamp, Piped |
-| **Proxy** | HTTP/SOCKS5 proxy URL for bypassing regional restrictions |
+| **Proxy** | HTTP / HTTPS / SOCKS4 / SOCKS5 proxy URL for bypassing regional restrictions |
 | **Cookies from** | Select a browser or **Auto (try all)** — tries Firefox first, then Chrome, Edge, Brave, Vivaldi |
 | **Extract** | Click to auto-extract cookies. In Auto mode, tries each browser until one succeeds |
 | **Cookie file** | Path to a `cookies.txt` file (Netscape format) for authenticated YouTube access |
@@ -344,7 +347,7 @@ The GUI **Settings** panel provides the same options in a desktop-friendly layou
 | **Bitrate** | Audio bitrate: Auto, 64k–320k, or disable |
 | **Audio source** | YouTube Music, YouTube, SoundCloud, Bandcamp, Piped |
 | **Duplicate policy** | Skip or metadata-based duplicate handling |
-| **Proxy** | HTTP/SOCKS5 proxy URL |
+| **Proxy** | HTTP / HTTPS / SOCKS4 / SOCKS5 proxy URL |
 | **Cookie file** | Path to a `cookies.txt` file |
 
 All settings are saved to `~/.spotdl/settings.json` and restored on restart.
@@ -448,6 +451,7 @@ python3 -m pip install -r requirements.txt
 - Audio quality depends on what YouTube Music offers (typically 128–256 kbps).
 - Downloading copyrighted music may violate Spotify's ToS and local copyright laws in your country.
 - YouTube cookies expire periodically (every few weeks) — re-extract when downloads start failing.
+- The `~/.spotdl/` folder is protected with owner-only permissions (0o700 on POSIX) and state files are written atomically with `fsync` to prevent data loss on crash.
 
 ## Project Structure
 
@@ -529,7 +533,7 @@ export CHROMIUM_FLAGS="--password-store=basic"
 ### Option 2: Use a Proxy
 
 1. Open **⚙ Settings**
-2. Enter a proxy URL in the **Proxy** field (e.g., `http://host:port` or `socks5://host:port`)
+2. Enter a proxy URL in the **Proxy** field (e.g., `http://host:port`, `socks4://host:port`, or `socks5://host:port`)
 3. Press **Enter** to save
 
 ### Option 3: Manual Cookie Export (Browser Extension)

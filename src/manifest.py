@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 import unicodedata
 from pathlib import Path
+from typing import cast
 
 from .models import AUDIO_EXTENSIONS, DuplicateGroup, LocalTrack
 
@@ -69,11 +70,11 @@ def scan_output_folder(output_folder: str | Path) -> list[LocalTrack]:
                 path=path,
                 filename=path.name,
                 normalized_name=normalize_name(stem),
-                title=metadata.get("title"),
-                artist=metadata.get("artist"),
-                album=metadata.get("album"),
-                duration=metadata.get("duration"),
-                bitrate=metadata.get("bitrate"),
+                title=cast(str | None, metadata.get("title")),
+                artist=cast(str | None, metadata.get("artist")),
+                album=cast(str | None, metadata.get("album")),
+                duration=cast(float | None, metadata.get("duration")),
+                bitrate=cast(int | None, metadata.get("bitrate")),
                 size=stat.st_size,
                 modified=stat.st_mtime,
                 tags={

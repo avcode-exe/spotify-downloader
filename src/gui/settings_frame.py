@@ -29,6 +29,8 @@ BROWSER_OPTIONS = [
     "vivaldi",
 ]
 
+_DUPLICATE_POLICY_MAP = dict(DUPLICATE_POLICY_OPTIONS)
+
 
 class SettingsFrame(ctk.CTkFrame):
     def __init__(
@@ -227,17 +229,24 @@ class SettingsFrame(ctk.CTkFrame):
             self._on_change(self._settings)
 
     def _status_text(self) -> str:
+        settings = self._settings
+        source = settings.get("audio_provider", "youtube-music").replace(
+            "-", " "
+        ).title()
+        duplicate_policy = settings.get("duplicate_policy", "skip")
+        if duplicate_policy not in _DUPLICATE_POLICY_MAP:
+            duplicate_policy = "skip"
         parts = [
-            f"Format: {self._settings.get('format', 'mp3').upper()}",
-            f"Bitrate: {self._settings.get('bitrate', 'auto')}",
-            f"Source: {self._settings.get('audio_provider', 'youtube-music').replace('-', ' ').title()}",
-            f"Duplicate: {dict(DUPLICATE_POLICY_OPTIONS).get(self._settings.get('duplicate_policy', 'skip'), 'skip')}",
-            f"Browser: {self._settings.get('browser', 'auto').title()}",
+            f"Format: {settings.get('format', 'mp3').upper()}",
+            f"Bitrate: {settings.get('bitrate', 'auto')}",
+            f"Source: {source}",
+            f"Duplicate: {_DUPLICATE_POLICY_MAP[duplicate_policy]}",
+            f"Browser: {settings.get('browser', 'auto').title()}",
         ]
-        if self._settings.get("proxy"):
-            parts.append(f"Proxy: {self._settings['proxy']}")
-        if self._settings.get("cookie_file"):
-            parts.append(f"Cookies: {os.path.basename(self._settings['cookie_file'])}")
+        if settings.get("proxy"):
+            parts.append(f"Proxy: {settings['proxy']}")
+        if settings.get("cookie_file"):
+            parts.append(f"Cookies: {os.path.basename(settings['cookie_file'])}")
         return " · ".join(parts)
 
     def get_settings(self) -> dict[str, str]:

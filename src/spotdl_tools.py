@@ -3,11 +3,27 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import re
 import shutil
 import sys
 
 
-def find_spotdl() -> list[str] | None:
+DOWNLOADING_RE = re.compile(r"Downloading\s+(.+)", re.IGNORECASE)
+DONE_RE = re.compile(r"(?:Downloaded|✓)\s+(.+)", re.IGNORECASE)
+SKIPPED_RE = re.compile(
+    r"Skipping\s+(.+)\s+as it is already downloaded", re.IGNORECASE
+)
+ERROR_RE = re.compile(r"(?:AudioProviderError|Failed to download)", re.IGNORECASE)
+FOUND_RE = re.compile(r"Found\s+(\d+)\s+songs", re.IGNORECASE)
+
+
+def find_spotdl() -> list[str]:
+    """Resolve a spotDL command list.
+
+    Prefers a standalone ``spotdl`` executable on PATH; otherwise falls back to
+    invoking the module with the current interpreter. Always returns a list --
+    the real "is spotDL usable?" check is delegated to :func:`validate_spotdl`.
+    """
     spotdl = shutil.which("spotdl") or shutil.which("spotdl.exe")
     if spotdl:
         return [spotdl]
@@ -32,6 +48,14 @@ async def validate_spotdl(spotdl_cmd: list[str]) -> bool:
 
 
 async def ensure_deno(spotdl_cmd: list[str]) -> bool:
+    """Best-effort installation of Deno (used for some age-restricted videos).
+
+    Returns ``True`` when Deno is already available or is installed
+    successfully, and ``False`` only when an install attempt fails. Deno is
+    **optional** for spotDL, so callers should treat ``False`` as a warning,
+    not a hard failure (see README). Previously this returned ``True`` on every
+    path, which made the failure branch unreachable and swallowed real errors.
+    """
     if shutil.which("deno") or shutil.which("deno.exe"):
         return True
     spotdl_home = os.path.join(os.path.expanduser("~"), ".spotdl")
@@ -50,14 +74,14 @@ async def ensure_deno(spotdl_cmd: list[str]) -> bool:
         if proc.returncode == 0:
             return True
         logging.getLogger("spotify_downloader").warning(
-            "Deno install skipped | exit_code=%d output=%s", proc.returncode, output
+            "Deno install failed | exit_code=%d output=%s", proc.returncode, output
         )
-        return True
+        return False
     except Exception as exc:
         logging.getLogger("spotify_downloader").warning(
             "Deno install skipped | error=%s", exc
         )
-        return True
+        return False
 
 
 def build_spotdl_args(

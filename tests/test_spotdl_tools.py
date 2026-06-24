@@ -126,6 +126,40 @@ class TestBuildSpotdlArgs:
         cmd = build_spotdl_args(["spotdl"], ["url"], "/out", settings)
         assert "--proxy" not in cmd
 
+    def test_urls_appended_at_end(self) -> None:
+        cmd = build_spotdl_args(
+            ["spotdl"], ["url1", "url2"], "/out", {}
+        )
+        assert cmd[-2] == "url1"
+        assert cmd[-1] == "url2"
+
+    def test_extra_args_before_urls(self) -> None:
+        cmd = build_spotdl_args(
+            ["spotdl"], ["url"], "/out", {}, extra_args=["--threads", "2"]
+        )
+        url_idx = cmd.index("url")
+        extra_idx = cmd.index("--threads")
+        assert extra_idx < url_idx
+
+    def test_bitrate_disable_included(self) -> None:
+        settings = {"bitrate": "disable"}
+        cmd = build_spotdl_args(["spotdl"], ["url"], "/out", settings)
+        assert "--bitrate" in cmd
+        assert "disable" in cmd
+
+    def test_overwrite_metadata(self) -> None:
+        cmd = build_spotdl_args(
+            ["spotdl"], ["url"], "/out", {}, overwrite="metadata"
+        )
+        assert cmd == [
+            "spotdl",
+            "--format", "mp3",
+            "--audio", "youtube-music",
+            "--output", "/out",
+            "--overwrite", "metadata",
+            "url",
+        ]
+
 
 class TestEnsureDeno:
     def test_returns_true_when_deno_on_path(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -145,7 +179,7 @@ class TestEnsureDeno:
         monkeypatch.setattr("os.path.expanduser", lambda path: str(tmp_path) if path == "~" else path)
         assert asyncio.run(ensure_deno(["spotdl"])) is True
 
-    def test_returns_true_on_install_failure(
+    def test_returns_false_on_install_failure(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         spotdl_home = tmp_path / ".spotdl"
@@ -159,9 +193,10 @@ class TestEnsureDeno:
             return _FakeProc(returncode=1, stdout=b"")
 
         with patch("asyncio.create_subprocess_exec", side_effect=fake_create_subprocess_exec):
-            assert asyncio.run(ensure_deno(["spotdl"])) is True
+            # Deno install failed -> False (was previously always True, a bug).
+            assert asyncio.run(ensure_deno(["spotdl"])) is False
 
-    def test_returns_true_on_exception(
+    def test_returns_false_on_exception(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         spotdl_home = tmp_path / ".spotdl"
@@ -175,7 +210,7 @@ class TestEnsureDeno:
             raise OSError("permission denied")
 
         with patch("asyncio.create_subprocess_exec", side_effect=failing_create_subprocess_exec):
-            assert asyncio.run(ensure_deno(["spotdl"])) is True
+            assert asyncio.run(ensure_deno(["spotdl"])) is False
 
 
 class _FakeProc:

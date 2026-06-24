@@ -1,15 +1,64 @@
 from __future__ import annotations
 
 import json
-import logging
 import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .models import TrackStatus
+
 STATE_FILE = os.path.join(os.path.expanduser("~"), ".spotdl", "track_state.json")
 HISTORY_FILE = os.path.join(os.path.expanduser("~"), ".spotdl", "download_history.json")
 SETTINGS_FILE = os.path.join(os.path.expanduser("~"), ".spotdl", "settings.json")
+
+
+def ensure_data_dir(path: str) -> None:
+    """Create the parent directory of ``path`` with restrictive permissions.
+
+    The ``~/.spotdl`` directory holds authenticated cookies and session state,
+    so we tighten it to owner-only (0o700) on POSIX. On Windows ``os.chmod``
+    only honours the read-only bit, so the call is a safe no-op there.
+    """
+    directory = os.path.dirname(path)
+    if not directory:
+        return
+    os.makedirs(directory, exist_ok=True)
+    try:
+        os.chmod(directory, 0o700)
+    except OSError:
+        pass
+
+
+def save_json_secure(path: str, data: object) -> None:
+    """Persist JSON atomically with owner-only file permissions.
+
+    Writes to a temp file, sets 0o600, fsyncs for durability, then
+    ``os.replace`` swaps it in place. Raises on failure so callers can
+    surface the error to the user instead of silently corrupting state.
+    """
+    ensure_data_dir(path)
+    tmp_path = f"{path}.tmp"
+    try:
+        with open(tmp_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+            f.flush()
+            try:
+                os.fsync(f.fileno())
+            except OSError:
+                pass
+        try:
+            os.chmod(tmp_path, 0o600)
+        except OSError:
+            pass
+        os.replace(tmp_path, path)
+    except OSError:
+        if os.path.exists(tmp_path):
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
+        raise
 
 
 def _load_raw() -> list[dict[str, Any]]:
@@ -29,13 +78,7 @@ def load_track_state() -> list[dict[str, Any]]:
 
 
 def save_track_state(state: list[dict[str, Any]]) -> None:
-    try:
-        os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
-        with open(STATE_FILE, "w", encoding="utf-8") as f:
-            json.dump(state, f, indent=2, ensure_ascii=False)
-    except OSError as exc:
-        log = logging.getLogger("spotify_downloader")
-        log.warning("Could not save track state | error=%s", exc)
+    save_json_secure(STATE_FILE, state)
 
 
 def upsert_track_state(
@@ -86,45 +129,39 @@ def upsert_track_state(
 
 
 def summarize_track_state(state: list[dict[str, Any]]) -> dict[str, int]:
-    summary = {
-        "downloaded": 0,
-        "skipped": 0,
-        "failed": 0,
-        "quarantined": 0,
-        "other": 0,
-    }
+    summary = {bucket: 0 for bucket in TrackStatus.SUMMARY_BUCKETS}
     for entry in state:
-        status = str(entry.get("status", "other"))
+        status = str(entry.get("status", TrackStatus.OTHER))
         if status in summary:
             summary[status] += 1
         else:
-            summary["other"] += 1
+            summary[TrackStatus.OTHER] += 1
     return summary
 
 
 def update_paths_from_scan(state: list[dict[str, Any]], tracks: list[Any]) -> None:
+    index: dict[str, dict[str, Any]] = {}
+    for entry in state:
+        key = str(entry.get("key", "")).strip().lower()
+        if key:
+            index[key] = entry
     for track in tracks:
         key = (
             getattr(track, "normalized_name", None)
             or Path(getattr(track, "filename", "")).stem.lower()
         )
-        existing = next(
-            (
-                e
-                for e in state
-                if str(e.get("key", "")).strip().lower() == str(key).strip().lower()
-            ),
-            None,
-        )
-        current_status = existing.get("status") if existing else None
-        if current_status in {"failed", "quarantined"}:
-            continue
+        key_str = str(key).strip().lower()
+        existing = index.get(key_str)
+        if existing is not None:
+            current_status = existing.get("status")
+            if current_status in {TrackStatus.FAILED, TrackStatus.QUARANTINED}:
+                continue
         upsert_track_state(
             state,
             key=str(key),
             title=getattr(track, "title", None),
             artist=getattr(track, "artist", None),
-            status="downloaded",
+            status=TrackStatus.DOWNLOADED,
             path=str(getattr(track, "path")),
             source="local-scan",
         )

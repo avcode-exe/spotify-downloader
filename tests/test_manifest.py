@@ -50,6 +50,12 @@ class TestNormalizeName:
             ("UPPERCASE", "uppercase"),
             ("Track - Artist", "track - artist"),
             ("", ""),
+            ("Café", "café"),
+            (" naïve", "naïve"),
+            ("日本語", "日本語"),
+            ("Song 🎵", "song 🎵"),
+            ("multiple   spaces", "multiple spaces"),
+            ("mixed CASE with - DASH", "mixed case with - dash"),
         ],
     )
     def test_normalize_name(self, input_name: str, expected: str) -> None:

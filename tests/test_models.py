@@ -9,6 +9,9 @@ from src.models import (
     DUPLICATE_POLICY_OPTIONS,
     DuplicateGroup,
     LocalTrack,
+    TrackStatus,
+    redact_proxy,
+    redact_settings_for_log,
 )
 
 
@@ -200,3 +203,53 @@ class TestConstants:
             ("Skip existing", "skip"),
             ("Update metadata", "metadata"),
         ]
+
+
+class TestTrackStatus:
+    def test_summary_buckets_cover_core_statuses(self) -> None:
+        # Guard against drift: every bucket summarize_track_state reports on
+        # must be a known status constant.
+        for name in ("DOWNLOADED", "SKIPPED", "FAILED", "QUARANTINED", "OTHER"):
+            assert getattr(TrackStatus, name) in TrackStatus.SUMMARY_BUCKETS
+
+    def test_values_are_stable_strings(self) -> None:
+        # The on-disk JSON contract depends on these exact values.
+        assert TrackStatus.DOWNLOADED == "downloaded"
+        assert TrackStatus.FAILED == "failed"
+        assert TrackStatus.QUARANTINED == "quarantined"
+
+
+class TestRedaction:
+    @pytest.mark.parametrize(
+        "proxy,expected",
+        [
+            ("", ""),
+            ("http://host:8080", "http://host:8080"),
+            ("socks5://host:1080", "socks5://host:1080"),
+            (
+                "http://user:secret@host:8080",
+                "http://***@host:8080",
+            ),
+            (
+                "socks5://u:p@10.0.0.1:1080",
+                "socks5://***@10.0.0.1:1080",
+            ),
+        ],
+    )
+    def test_redact_proxy(self, proxy: str, expected: str) -> None:
+        assert redact_proxy(proxy) == expected
+
+    def test_redact_settings_for_log_masks_credentials(self) -> None:
+        settings = {
+            "format": "mp3",
+            "proxy": "http://user:secret@host:8080",
+            "cookie_file": "/x/cookies.txt",
+        }
+        out = redact_settings_for_log(settings)
+        assert "secret" not in out["proxy"]
+        assert out["proxy"] == "http://***@host:8080"
+        # non-sensitive fields are untouched
+        assert out["format"] == "mp3"
+        assert out["cookie_file"] == "/x/cookies.txt"
+        # original dict is not mutated
+        assert settings["proxy"] == "http://user:secret@host:8080"

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import time
 from typing import Any
 
@@ -12,6 +13,7 @@ from src.state import (
     HISTORY_FILE,
     SETTINGS_FILE,
     load_track_state,
+    save_json_secure,
     summarize_track_state,
 )
 
@@ -23,6 +25,9 @@ from .log_frame import LogFrame
 from .preview_frame import PreviewFrame
 from .settings_frame import SettingsFrame
 from .workers import SpotDLWorker, WorkerResult
+
+
+_VALID_PLAYLIST_ID_RE = re.compile(r"^[A-Za-z0-9]{22}$")
 
 
 class SpotifyDownloaderGUI(ctk.CTk):
@@ -43,6 +48,9 @@ class SpotifyDownloaderGUI(ctk.CTk):
         self._worker: SpotDLWorker | None = None
         self._confirm_clean_until = 0.0
         self._download_start_time = 0.0
+        # Failed-track URLs are owned by the controller (not the worker) so that
+        # Retry survives a worker being replaced for a new download.
+        self._failed_tracks: list[str] = []
 
         self._build_ui()
         self._apply_settings_to_ui()
@@ -154,9 +162,7 @@ class SpotifyDownloaderGUI(ctk.CTk):
 
     def _save_settings(self) -> None:
         try:
-            os.makedirs(os.path.dirname(SETTINGS_FILE), exist_ok=True)
-            with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
-                json.dump(self._settings, f, indent=2, ensure_ascii=False)
+            save_json_secure(SETTINGS_FILE, self._settings)
         except OSError:
             pass
 
@@ -173,9 +179,7 @@ class SpotifyDownloaderGUI(ctk.CTk):
 
     def _save_history(self) -> None:
         try:
-            os.makedirs(os.path.dirname(HISTORY_FILE), exist_ok=True)
-            with open(HISTORY_FILE, "w", encoding="utf-8") as f:
-                json.dump(self._history, f, indent=2, ensure_ascii=False)
+            save_json_secure(HISTORY_FILE, self._history)
         except OSError:
             pass
 
@@ -202,8 +206,7 @@ class SpotifyDownloaderGUI(ctk.CTk):
         )
 
     def _apply_settings_to_ui(self) -> None:
-        self._settings_frame._on_setting_changed()
-        self._settings_frame._loading = False
+        self._settings = self._settings_frame.get_settings()
 
     def _on_settings_changed(self, settings: dict[str, str]) -> None:
         self._settings = settings
@@ -236,12 +239,11 @@ class SpotifyDownloaderGUI(ctk.CTk):
 
     def _on_download(self) -> None:
         url = self._home_frame.url_entry.get().strip()
-        if not url or not (
-            url.startswith("https://open.spotify.com/playlist/")
-            or url.startswith("spotify:playlist:")
-        ):
+        if not url or not self._is_valid_url(url):
             self._log_frame.write(
-                "Invalid URL. Must start with https://open.spotify.com/playlist/ or spotify:playlist:"
+                "Invalid URL. Must be a Spotify playlist URL: "
+                "https://open.spotify.com/playlist/<22-char-id> or "
+                "spotify:playlist:<22-char-id>"
             )
             return
         self._check_cookie_file()
@@ -250,12 +252,11 @@ class SpotifyDownloaderGUI(ctk.CTk):
 
     def _on_fresh(self) -> None:
         url = self._home_frame.url_entry.get().strip()
-        if not url or not (
-            url.startswith("https://open.spotify.com/playlist/")
-            or url.startswith("spotify:playlist:")
-        ):
+        if not url or not self._is_valid_url(url):
             self._log_frame.write(
-                "Invalid URL. Must start with https://open.spotify.com/playlist/ or spotify:playlist:"
+                "Invalid URL. Must be a Spotify playlist URL: "
+                "https://open.spotify.com/playlist/<22-char-id> or "
+                "spotify:playlist:<22-char-id>"
             )
             return
         self._check_cookie_file()
@@ -263,6 +264,8 @@ class SpotifyDownloaderGUI(ctk.CTk):
         self._start_worker(url, output_folder, fresh=True)
 
     def _start_worker(self, url: str, output_folder: str, fresh: bool) -> None:
+        # A fresh download starts a new retry set; drop any previously failed URLs.
+        self._failed_tracks.clear()
         self._worker = SpotDLWorker(
             self._settings, output_folder, self._on_worker_event, tk_root=self
         )
@@ -271,11 +274,23 @@ class SpotifyDownloaderGUI(ctk.CTk):
         self._download_start_time = time.monotonic()
 
     def _on_retry(self) -> None:
-        if self._worker is None or not self._worker._failed_tracks:
+        if not self._failed_tracks:
             self._log_frame.write("No failed tracks to retry.")
             return
+        output_folder = (
+            self._home_frame.output_entry.get().strip() or "./downloads"
+        )
+        if self._worker is None:
+            self._worker = SpotDLWorker(
+                self._settings,
+                output_folder,
+                self._on_worker_event,
+                tk_root=self,
+            )
+        urls = list(self._failed_tracks)
+        self._failed_tracks.clear()
         self._home_frame.set_busy(True)
-        self._worker.start_retry()
+        self._worker.start_retry(urls)
         self._download_start_time = time.monotonic()
 
     def _on_cancel(self) -> None:
@@ -293,15 +308,21 @@ class SpotifyDownloaderGUI(ctk.CTk):
                 result.data.get("progress", 0.0),
             )
         elif result.kind == "progress":
-            total = result.data.get("total", 0)
-            if total > 0:
-                self._home_frame.progress.configure(maximum=total)
+            # CTkProgressBar.set() interprets its argument as a 0..1 fraction
+            # regardless of `maximum`, so we standardise on the fraction model
+            # driven by the "status" events and never mutate `maximum` here.
+            self._home_frame.progress.set(0.0)
         elif result.kind == "track":
             self._home_frame.update_status(
                 self._home_frame.status_var.get(),
                 result.data["track"],
                 self._home_frame.progress.get(),
             )
+        elif result.kind == "failed":
+            # Accumulate retryable URLs at the controller level.
+            url = result.data.get("url")
+            if url and url not in self._failed_tracks:
+                self._failed_tracks.append(url)
         elif result.kind == "history":
             self._append_history(
                 result.data["url"],
@@ -310,11 +331,23 @@ class SpotifyDownloaderGUI(ctk.CTk):
                 result.data["status"],
             )
         elif result.kind == "done":
+            # The worker persisted its track_state to disk; reload ours so the
+            # preview/history counts are fresh instead of stale.
+            self._track_state = load_track_state()
             self._home_frame.set_busy(False)
+            self._reflect_failed_state()
             self._refresh_preview()
+            self._render_history()
         elif result.kind == "error":
             self._log_frame.write(f"✗ {result.error}")
             self._home_frame.set_busy(False)
+            self._reflect_failed_state()
+
+    def _reflect_failed_state(self) -> None:
+        """Enable the Retry button only when there are tracks to retry."""
+        self._home_frame.retry_btn.configure(
+            state="normal" if self._failed_tracks else "disabled"
+        )
 
     def _check_cookie_file(self) -> None:
         cookie_file = self._settings.get("cookie_file", "").strip()
@@ -325,9 +358,24 @@ class SpotifyDownloaderGUI(ctk.CTk):
                 "Update the path in Settings or re-export cookies from your browser."
             )
 
+    @staticmethod
+    def _is_valid_url(url: str) -> bool:
+        if url.startswith("https://open.spotify.com/playlist/"):
+            playlist_id = url[len("https://open.spotify.com/playlist/") :].split("?")[
+                0
+            ]
+            return bool(_VALID_PLAYLIST_ID_RE.match(playlist_id))
+        if url.startswith("spotify:playlist:"):
+            playlist_id = url[len("spotify:playlist:") :]
+            return bool(_VALID_PLAYLIST_ID_RE.match(playlist_id))
+        return False
+
     def _on_close(self) -> None:
         if self._worker is not None:
             self._worker.cancel()
+            thread = getattr(self._worker, "_thread", None)
+            if thread is not None and thread.is_alive():
+                thread.join(timeout=5)
         self.destroy()
 
     def _check_dependency_updates(self) -> None:

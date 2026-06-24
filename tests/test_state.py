@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import json
 import os
 from pathlib import Path
@@ -7,27 +5,13 @@ from pathlib import Path
 import pytest
 
 from src.state import (
-    HISTORY_FILE,
-    SETTINGS_FILE,
-    STATE_FILE,
-    load_track_state,
+    ensure_data_dir,
+    save_json_secure,
     save_track_state,
     summarize_track_state,
     update_paths_from_scan,
     upsert_track_state,
 )
-
-
-@pytest.fixture(autouse=True)
-def _isolate_state_files(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    state_file = tmp_path / "track_state.json"
-    history_file = tmp_path / "download_history.json"
-    settings_file = tmp_path / "settings.json"
-
-    monkeypatch.setenv("HOME", str(tmp_path))
-    monkeypatch.setattr("src.state.STATE_FILE", str(state_file))
-    monkeypatch.setattr("src.state.HISTORY_FILE", str(history_file))
-    monkeypatch.setattr("src.state.SETTINGS_FILE", str(settings_file))
 
 
 @pytest.fixture()
@@ -191,6 +175,30 @@ class TestUpdatePathsFromScan:
         update_paths_from_scan(sample_state, [])
         assert len(sample_state) == 3
 
+    def test_inserts_new_entry_when_track_not_found(
+        self, empty_state: list[dict]
+    ) -> None:
+        track = type("Track", (), {"normalized_name": "new-song", "title": "New Song", "artist": "A", "path": Path("/music/new.mp3")})()
+        update_paths_from_scan(empty_state, [track])
+        assert len(empty_state) == 1
+        assert empty_state[0]["status"] == "downloaded"
+
+    def test_falls_back_to_filename_when_normalized_name_missing(
+        self, empty_state: list[dict]
+    ) -> None:
+        track = type("Track", (), {"filename": "fallback.mp3", "title": "Fallback", "artist": None, "path": Path("/music/fallback.mp3")})()
+        update_paths_from_scan(empty_state, [track])
+        assert len(empty_state) == 1
+        assert empty_state[0]["key"] == "fallback"
+
+    def test_key_matching_is_case_insensitive(self, empty_state: list[dict]) -> None:
+        track_path = Path("/music/my.mp3")
+        upsert_track_state(empty_state, key="My Song", status="downloaded", title="My Song")
+        track = type("Track", (), {"normalized_name": "my song", "title": "My Song", "artist": "A", "path": track_path})()
+        update_paths_from_scan(empty_state, [track])
+        assert len(empty_state) == 1
+        assert empty_state[0]["path"] == str(track_path)
+
 
 class TestSaveTrackState:
     def test_saves_to_file(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -201,3 +209,35 @@ class TestSaveTrackState:
         assert state_file.exists()
         loaded = json.loads(state_file.read_text(encoding="utf-8"))
         assert loaded == state
+
+
+class TestSecureJsonWrite:
+    def test_writes_atomically_and_readably(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        target = tmp_path / "nested" / "data.json"
+        save_json_secure(str(target), {"k": "v"})
+        assert target.exists()
+        assert json.loads(target.read_text(encoding="utf-8")) == {"k": "v"}
+        # the temp file must not be left behind
+        assert not Path(str(target) + ".tmp").exists()
+
+    def test_overwrites_existing_atomically(self, tmp_path: Path) -> None:
+        target = tmp_path / "data.json"
+        target.write_text("old", encoding="utf-8")
+        save_json_secure(str(target), {"k": "new"})
+        assert json.loads(target.read_text(encoding="utf-8")) == {"k": "new"}
+
+    @pytest.mark.skipif(os.name == "nt", reason="POSIX permissions not enforced on Windows")
+    def test_restricts_file_permissions_on_posix(self, tmp_path: Path) -> None:
+        target = tmp_path / "secret.json"
+        save_json_secure(str(target), {"cookie": "x"})
+        mode = target.stat().st_mode & 0o777
+        assert mode == 0o600
+
+    @pytest.mark.skipif(os.name == "nt", reason="POSIX permissions not enforced on Windows")
+    def test_ensure_data_dir_restricts_directory_on_posix(self, tmp_path: Path) -> None:
+        nested = tmp_path / "sensitive" / "deeper" / "f.json"
+        ensure_data_dir(str(nested))
+        mode = nested.parent.stat().st_mode & 0o777
+        assert mode == 0o700

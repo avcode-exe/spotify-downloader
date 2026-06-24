@@ -32,7 +32,7 @@ def frame_kwargs() -> dict[str, str | int]:
     }
 
 
-def button_kwargs(style: str = "primary") -> dict[str, str | tuple[str, ...] | None]:
+def button_kwargs(style: str = "primary") -> dict[str, object]:
     if style == "primary":
         return {
             "fg_color": SPOTIFY_GREEN,
