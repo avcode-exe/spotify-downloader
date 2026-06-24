@@ -50,7 +50,7 @@ python --version
 
 Write-Host ""
 Write-Host "[2/5] Installing build dependencies..." -ForegroundColor Yellow
-pip install -q pyinstaller
+pip install -q -r requirements.txt pyinstaller
 
 Write-Host ""
 Write-Host "[3/5] Cleaning previous build..." -ForegroundColor Yellow

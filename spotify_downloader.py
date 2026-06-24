@@ -73,6 +73,7 @@ DEFAULT_SETTINGS: dict[str, str] = {
     "cookie_file": "",
     "browser": "auto",
     "duplicate_policy": "skip",
+    "use_cache_file": "true",
 }
 BROWSER_OPTIONS: list[tuple[str, str]] = [
     ("Auto (try all)", "auto"),
@@ -698,6 +699,14 @@ class SpotifyDownloader(App):
         self._settings: dict[str, str] = self._load_settings()
         self._history: list[dict] = self._load_history()
         self._track_state: list[dict] = load_track_state()
+        self._failed_tracks = [
+            e["key"]
+            for e in self._track_state
+            if e.get("status") == TrackStatus.FAILED
+            and e.get("key", "").startswith(
+                ("https://open.spotify.com/track/", "spotify:track:")
+            )
+        ]
         self._duplicate_groups: list[Any] = []
         self._last_scan: list[LocalTrack] = []
         self._scan_index: dict[str, LocalTrack] = {}
@@ -719,9 +728,9 @@ class SpotifyDownloader(App):
                 )
 
             with Container(id="input-section"):
-                yield Label("Playlist URL:", classes="input-label")
+                yield Label("Playlist or Track URL:", classes="input-label")
                 yield Input(
-                    placeholder="https://open.spotify.com/playlist/...",
+                    placeholder="https://open.spotify.com/playlist/... or /track/...",
                     id="url-input",
                 )
                 yield Label("Output folder:", classes="input-label")
@@ -1380,11 +1389,25 @@ class SpotifyDownloader(App):
         self.query_one("#cancel-btn", Button).disabled = True
         self.query_one("#retry-btn", Button).disabled = not self._failed_tracks
 
-    def _kill_process(self) -> None:
+    async def _kill_process(self) -> None:
         if self._process is not None:
             try:
                 self._process.terminate()
                 log.info("Terminated spotDL process | pid=%d", self._process.pid)
+                try:
+                    await asyncio.wait_for(self._process.wait(), timeout=5.0)
+                except asyncio.TimeoutError:
+                    log.warning(
+                        "spotDL process did not exit after terminate, killing | pid=%d",
+                        self._process.pid,
+                    )
+                    try:
+                        self._process.kill()
+                        await self._process.wait()
+                    except ProcessLookupError:
+                        log.debug("spotDL process already exited after kill")
+                    except Exception as exc:
+                        log.warning("Error killing spotDL process: %s", exc)
             except ProcessLookupError:
                 log.debug("spotDL process already exited")
             except Exception as exc:
@@ -1873,7 +1896,12 @@ class SpotifyDownloader(App):
                 "[bold yellow]⚠[/] [bold]Deno[/] could not be installed. "
                 "Age-restricted videos may fail, but most downloads still work."
             )
-        os.makedirs(out, exist_ok=True)
+        try:
+            os.makedirs(out, exist_ok=True)
+        except PermissionError:
+            self._log(f"[bold red]✗[/] Cannot create output folder: [bold]{out}[/]")
+            self._unlock_ui()
+            return
         policy = self._settings.get("duplicate_policy", "skip")
         if policy not in {"skip", "metadata"}:
             policy = "skip"
@@ -1901,10 +1929,10 @@ class SpotifyDownloader(App):
         log.info("Download handler finished | url=%s", url)
 
     @on(Button.Pressed, "#cancel-btn")
-    def on_cancel(self) -> None:
+    async def on_cancel(self) -> None:
         if self._process is not None:
             self._cancel_requested = True
-            self._kill_process()
+            await self._kill_process()
             self._status_label.update("Cancelled")
             self._log("[bold red]⏹[/] Download cancelled by user")
             log.info("Download cancelled by user")
@@ -1936,7 +1964,12 @@ class SpotifyDownloader(App):
                 "[bold yellow]⚠[/] [bold]Deno[/] could not be installed. "
                 "Age-restricted videos may fail, but most downloads still work."
             )
-        os.makedirs(out, exist_ok=True)
+        try:
+            os.makedirs(out, exist_ok=True)
+        except PermissionError:
+            self._log(f"[bold red]✗[/] Cannot create output folder: [bold]{out}[/]")
+            self._unlock_ui()
+            return
         self._lock_ui()
         self._failed_tracks.clear()
         self._status_label.update("Fresh download…")
@@ -1993,7 +2026,12 @@ class SpotifyDownloader(App):
                 "[bold yellow]⚠[/] [bold]Deno[/] could not be installed. "
                 "Age-restricted videos may fail, but most downloads still work."
             )
-        os.makedirs(out, exist_ok=True)
+        try:
+            os.makedirs(out, exist_ok=True)
+        except PermissionError:
+            self._log(f"[bold red]✗[/] Cannot create output folder: [bold]{out}[/]")
+            self._unlock_ui()
+            return
         track_urls = list(self._failed_tracks)
         self._failed_tracks.clear()
         self.query_one("#retry-btn", Button).disabled = True
@@ -2011,7 +2049,6 @@ class SpotifyDownloader(App):
             spotdl_cmd,
             track_urls,
             out,
-            add_download_op=True,
             overwrite="skip",
             scan_for_songs=True,
         )
@@ -2023,10 +2060,10 @@ class SpotifyDownloader(App):
         )
 
     @on(Button.Pressed, "#quit-btn")
-    def on_quit(self) -> None:
+    async def on_quit(self) -> None:
         log.info("Quit requested")
         self._cancel_requested = True
-        self._kill_process()
+        await self._kill_process()
         self.exit()
 
     @staticmethod

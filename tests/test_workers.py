@@ -96,6 +96,11 @@ class TestRegexPatterns:
         assert m is not None
         assert m.group(1) == "42"
 
+    def test_found_re_singular(self) -> None:
+        m = FOUND_RE.search("Found  1  song")
+        assert m is not None
+        assert m.group(1) == "1"
+
 
 class TestWorkerResult:
     def test_create_result(self) -> None:

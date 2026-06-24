@@ -8,6 +8,7 @@ from typing import Any, cast
 from .models import AUDIO_EXTENSIONS, DuplicateGroup, LocalTrack
 
 _METADATA_CACHE: dict[Path, tuple[float, int, dict[str, Any]]] = {}
+_METADATA_CACHE_MAXSIZE = 2048
 
 SAFE_MOVE_REASONS = {"same normalized filename"}
 
@@ -62,6 +63,12 @@ def _read_audio_metadata(path: Path) -> dict[str, object]:
         metadata["genre"] = _first_audio_value(audio, "genre")
         metadata["date"] = _first_audio_value(audio, "date")
     _METADATA_CACHE[path] = (mtime, size, metadata)
+    if len(_METADATA_CACHE) > _METADATA_CACHE_MAXSIZE:
+        excess = len(_METADATA_CACHE) - _METADATA_CACHE_MAXSIZE + 64
+        for i, key in enumerate(_METADATA_CACHE):
+            if i >= excess:
+                break
+            _METADATA_CACHE.pop(key)
     return metadata
 
 

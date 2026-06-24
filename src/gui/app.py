@@ -29,6 +29,7 @@ from .log_frame import LogFrame
 from .preview_frame import PreviewFrame
 from .settings_frame import SettingsFrame
 from .workers import SpotDLWorker, WorkerResult
+from src.models import TrackStatus
 
 
 class SpotifyDownloaderGUI(ctk.CTk):
@@ -46,6 +47,14 @@ class SpotifyDownloaderGUI(ctk.CTk):
         self._settings = self._load_settings()
         self._history = self._load_history()
         self._track_state = load_track_state()
+        self._failed_tracks = [
+            e["key"]
+            for e in self._track_state
+            if e.get("status") == TrackStatus.FAILED
+            and e.get("key", "").startswith(
+                ("https://open.spotify.com/track/", "spotify:track:")
+            )
+        ]
         self._worker: SpotDLWorker | None = None
         self._confirm_clean_until = 0.0
         self._download_start_time = 0.0
@@ -312,7 +321,10 @@ class SpotifyDownloaderGUI(ctk.CTk):
             # CTkProgressBar.set() interprets its argument as a 0..1 fraction
             # regardless of `maximum`, so we standardise on the fraction model
             # driven by the "status" events and never mutate `maximum` here.
-            self._home_frame.progress.set(0.0)
+            total = result.data.get("total", 0)
+            done = result.data.get("done", 0)
+            if total > 0:
+                self._home_frame.progress.set(done / total)
         elif result.kind == "track":
             self._home_frame.update_status(
                 self._home_frame.status_var.get(),
@@ -404,8 +416,6 @@ class SpotifyDownloaderGUI(ctk.CTk):
                     + "\n".join(f"   • {u}" for u in updates)
                     + f"\n   Run: pip install -U {pkgs}"
                 )
-            else:
-                msg = "✓ Ready"
-            self.after(0, self._log_frame.write, msg)
+                self.after(0, self._log_frame.write, msg)
 
         Thread(target=_check, daemon=True).start()

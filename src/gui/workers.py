@@ -4,12 +4,14 @@ import asyncio
 import logging
 import os
 import re
+import signal
+import subprocess
 import time
 from dataclasses import dataclass
 from threading import Thread
 from typing import Any, Callable
 
-from src.manifest import normalize_name
+from src.manifest import normalize_name, scan_output_folder
 from src.models import TrackStatus
 from src.spotdl_tools import (
     DONE_RE,
@@ -61,6 +63,7 @@ class SpotDLWorker:
         self._process: asyncio.subprocess.Process | None = None
         self._cancel_requested = False
         self._track_state = load_track_state()
+        self._track_state_dirty = False
         self._last_scan: list[Any] = []
         self._scan_index: dict[str, Any] = {}
         self._thread: Thread | None = None
@@ -86,6 +89,19 @@ class SpotDLWorker:
             try:
                 self._process.terminate()
             except ProcessLookupError:
+                pass
+            try:
+                pid = self._process.pid
+                if pid:
+                    if os.name == "nt":
+                        subprocess.run(
+                            ["taskkill", "/F", "/T", "/PID", str(pid)],
+                            stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL,
+                        )
+                    else:
+                        os.killpg(os.getpgid(pid), signal.SIGTERM)
+            except (ProcessLookupError, OSError):
                 pass
 
     def _emit(self, kind: str, data: Any = None, error: str | None = None) -> None:
@@ -129,7 +145,18 @@ class SpotDLWorker:
                     "Age-restricted videos may fail; most downloads still work."
                 )
 
-            os.makedirs(self._output_folder, exist_ok=True)
+            try:
+                os.makedirs(self._output_folder, exist_ok=True)
+            except PermissionError:
+                self._emit("error", error=f"Cannot create output folder: {self._output_folder}")
+                return
+            try:
+                self._last_scan = scan_output_folder(self._output_folder)
+                self._scan_index = {t.normalized_name: t for t in self._last_scan}
+            except Exception as exc:
+                logging.getLogger("spotify_downloader").warning(
+                    "Scan index build failed | error=%s", exc
+                )
 
             policy = self._settings.get("duplicate_policy", "skip")
             if policy not in {"skip", "metadata"}:
@@ -173,7 +200,18 @@ class SpotDLWorker:
                     "Age-restricted videos may fail; most downloads still work."
                 )
 
-            os.makedirs(self._output_folder, exist_ok=True)
+            try:
+                os.makedirs(self._output_folder, exist_ok=True)
+            except PermissionError:
+                self._emit("error", error=f"Cannot create output folder: {self._output_folder}")
+                return
+            try:
+                self._last_scan = scan_output_folder(self._output_folder)
+                self._scan_index = {t.normalized_name: t for t in self._last_scan}
+            except Exception as exc:
+                logging.getLogger("spotify_downloader").warning(
+                    "Scan index build failed | error=%s", exc
+                )
             if not track_urls:
                 self._log_buffer.append("No failed tracks to retry.")
                 self._emit(
@@ -186,7 +224,6 @@ class SpotDLWorker:
                 track_urls,
                 self._output_folder,
                 self._settings,
-                add_download_op=True,
                 overwrite="skip",
                 scan_for_songs=True,
             )
@@ -413,11 +450,12 @@ class SpotDLWorker:
             self._emit("error", error=str(exc))
         finally:
             self._process = None
-            try:
-                save_track_state(self._track_state)
-            except OSError as exc:
-                log = logging.getLogger("spotify_downloader")
-                log.error("Could not save track state | error=%s", exc)
+            if self._track_state_dirty:
+                try:
+                    save_track_state(self._track_state)
+                except OSError as exc:
+                    log = logging.getLogger("spotify_downloader")
+                    log.error("Could not save track state | error=%s", exc)
             if self._log_buffer:
                 batch = "\n".join(self._log_buffer)
                 self._log_buffer.clear()
@@ -426,6 +464,7 @@ class SpotDLWorker:
                 loop.close()
 
     def _record_completed_track(self, track_name: str, status: str) -> None:
+        self._track_state_dirty = True
         key = normalize_name(track_name)
         upsert_track_state(
             self._track_state,
@@ -451,6 +490,7 @@ class SpotDLWorker:
             pass
 
     def _record_failed_track(self, text: str) -> None:
+        self._track_state_dirty = True
         track_url_m = re.search(
             r"(https?://open\.spotify\.com/track/[A-Za-z0-9]+)", text
         )

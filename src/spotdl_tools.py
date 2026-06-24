@@ -13,7 +13,7 @@ DOWNLOADING_RE = re.compile(r"Downloading\s+(.+)", re.IGNORECASE)
 DONE_RE = re.compile(r"(?:Downloaded|✓)\s+(.+)", re.IGNORECASE)
 SKIPPED_RE = re.compile(r"Skipping\s+(.+)\s+as it is already downloaded", re.IGNORECASE)
 ERROR_RE = re.compile(r"(?:AudioProviderError|Failed to download)", re.IGNORECASE)
-FOUND_RE = re.compile(r"Found\s+(\d+)\s+songs", re.IGNORECASE)
+FOUND_RE = re.compile(r"Found\s+(\d+)\s+songs?", re.IGNORECASE)
 
 
 def is_valid_spotify_url(url: str) -> bool:
@@ -128,6 +128,8 @@ def build_spotdl_args(
         cmd.extend(["--proxy", proxy])
     if cookie_file and os.path.isfile(cookie_file):
         cmd.extend(["--cookie-file", cookie_file])
+    if settings.get("use_cache_file", "true").lower() != "false":
+        cmd.append("--use-cache-file")
     cmd.extend(["--output", output_folder])
     if overwrite:
         cmd.extend(["--overwrite", overwrite])

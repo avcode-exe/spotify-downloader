@@ -2,7 +2,7 @@
 ; Requires Inno Setup 6.0 or later: https://jrsoftware.org/isdl.php
 
 #define MyAppName "Spotify Downloader"
-#define MyAppVersion "0.1.1"
+#define MyAppVersion "1.0.0"
 #define MyAppPublisher "Your Name"
 #define MyAppURL "https://github.com/avcode-exe/spotify-downloader"
 #define MyAppExeName "SpotifyDownloader.exe"
@@ -11,7 +11,7 @@
 #define MyAppAssocKey StringChange(MyAppAssocName, " ", "") + MyAppAssocExt
 
 [Setup]
-AppId={{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}
+AppId={#emit GUIDFromText("SpotifyDownloader-1.0.0")}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppVerName={#MyAppName} {#MyAppVersion}
@@ -65,8 +65,9 @@ var
 begin
   AppPath := ExpandConstant('{app}');
   PsFile := ExpandConstant('{tmp}\add_to_path.ps1');
-  PsCmd := Format('$p = [Environment]::GetEnvironmentVariable("Path", "User")' + #13#10 +
-    'if ($p -notlike "*%s*") {' + #13#10 +
+  PsCmd := Format('$escaped = [WildcardPattern]::Escape("%s")' + #13#10 +
+    '$p = [Environment]::GetEnvironmentVariable("Path", "User")' + #13#10 +
+    'if ($p -notlike "*$escaped*") {' + #13#10 +
     '  $newPath = $p + ";%s"' + #13#10 +
     '  if ($newPath.Length -lt 2048) {' + #13#10 +
     '    [Environment]::SetEnvironmentVariable("Path", $newPath, "User")' + #13#10 +

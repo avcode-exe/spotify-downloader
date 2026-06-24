@@ -40,17 +40,14 @@ def save_json_secure(path: str, data: object) -> None:
     ensure_data_dir(path)
     tmp_path = f"{path}.tmp"
     try:
-        with open(tmp_path, "w", encoding="utf-8") as f:
+        fd = os.open(tmp_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
             f.flush()
             try:
                 os.fsync(f.fileno())
             except OSError:
                 pass
-        try:
-            os.chmod(tmp_path, 0o600)
-        except OSError:
-            pass
         os.replace(tmp_path, path)
     except OSError:
         if os.path.exists(tmp_path):

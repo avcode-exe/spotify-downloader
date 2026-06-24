@@ -1,6 +1,6 @@
 # Spotify Playlist Downloader 🎵
 
-A terminal-based UI that downloads Spotify playlists by matching tracks to
+A terminal/GUI app that downloads Spotify playlists and individual tracks by matching to
 YouTube Music (via [spotDL](https://github.com/spotDL/spotify-downloader)).
 
 [![Python](https://img.shields.io/badge/Python-3.10+-blue)](https://www.python.org/) [![spotDL](https://img.shields.io/badge/spotDL-4.5+-green)](https://github.com/spotDL/spotify-downloader)
@@ -9,7 +9,7 @@ YouTube Music (via [spotDL](https://github.com/spotDL/spotify-downloader)).
 
 - **Terminal UI** — Rich, interactive interface built with [Textual](https://textual.textualize.io/)
 - **Modern GUI (optional)** — Lightweight desktop app built with [CustomTkinter](https://github.com/TomSchimansky/CustomTkinter) (Windows/macOS/Linux)
-- **Playlist Downloads** — Paste any public Spotify playlist URL and download all tracks
+- **Playlist & Track Downloads** — Paste any public Spotify playlist or individual track URL
 - **Fresh Download Mode** — Overwrite existing files for a clean re-download
 - **Retry Failed** — Automatically retry tracks that failed to download
 - **Download History** — View your past download sessions with status and timestamps
@@ -64,7 +64,7 @@ python gui_app.py
 
 ### GUI Features
 
-- **Playlist URL input** — paste any public Spotify playlist URL
+- **Playlist or Track URL input** — paste any public Spotify playlist or track URL
 - **Output folder** — choose where to save downloads
 - **Download / Fresh / Retry Failed** — full download control
 - **Preview** — scan local folder and see duplicate groups

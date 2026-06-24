@@ -26,7 +26,7 @@ python --version
 
 echo.
 echo [2/5] Installing build dependencies...
-pip install -q pyinstaller
+pip install -q -r requirements.txt pyinstaller
 
 echo.
 echo [3/5] Cleaning previous build...

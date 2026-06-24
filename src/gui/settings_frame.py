@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from typing import Callable
+from typing import Callable, Sequence
 
 import customtkinter as ctk
 
@@ -20,13 +20,13 @@ from .theme import (
     frame_kwargs,
 )
 
-BROWSER_OPTIONS = [
-    "auto",
-    "chrome",
-    "firefox",
-    "edge",
-    "brave",
-    "vivaldi",
+BROWSER_OPTIONS: list[tuple[str, str]] = [
+    ("Auto (try all)", "auto"),
+    ("Chrome", "chrome"),
+    ("Firefox", "firefox"),
+    ("Edge", "edge"),
+    ("Brave", "brave"),
+    ("Vivaldi", "vivaldi"),
 ]
 
 _DUPLICATE_POLICY_MAP = {code: label for label, code in DUPLICATE_POLICY_OPTIONS}
@@ -148,8 +148,15 @@ class SettingsFrame(ctk.CTkFrame):
         parent: ctk.CTkFrame,
         label: str,
         variable: ctk.StringVar,
-        options: list[str],
+        options: Sequence[str | tuple[str, str]],
     ) -> None:
+        if options and isinstance(options[0], tuple):
+            display_options = [opt[0] for opt in options]
+            value_map = {opt[0]: opt[1] for opt in options}
+        else:
+            display_options = [str(opt) for opt in options]
+            value_map = {str(opt): str(opt) for opt in options}
+
         row = ctk.CTkFrame(parent, fg_color="transparent")
         row.pack(fill="x", pady=(0, 10))
 
@@ -163,17 +170,26 @@ class SettingsFrame(ctk.CTkFrame):
         )
         label_widget.pack(side="left", padx=(0, 12))
 
+        current_value = variable.get()
+        resolved_value = value_map.get(current_value, current_value)
+        variable.set(resolved_value)
+
         option = ctk.CTkOptionMenu(
             row,
             variable=variable,
-            values=options,
-            command=self._on_setting_changed,
+            values=display_options,
+            command=lambda _value, vm=value_map: self._on_browser_changed(vm),
             height=36,
             corner_radius=6,
             font=FONT_BUTTON,
             dropdown_font=FONT_BUTTON,
         )
         option.pack(side="left", fill="x", expand=True)
+
+    def _on_browser_changed(self, value_map: dict[str, str], selected: str) -> None:
+        actual_value = value_map.get(selected, selected)
+        self._browser_var.set(actual_value)
+        self._on_setting_changed(actual_value)
 
     def _add_entry_row(
         self, parent: ctk.CTkFrame, label: str, variable: ctk.StringVar

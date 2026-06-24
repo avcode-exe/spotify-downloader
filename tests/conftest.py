@@ -12,6 +12,7 @@ def _isolate_state_files(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Non
     settings_file = tmp_path / "settings.json"
 
     monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
     monkeypatch.setattr("src.state.STATE_FILE", str(state_file))
     monkeypatch.setattr("src.state.HISTORY_FILE", str(history_file))
     monkeypatch.setattr("src.state.SETTINGS_FILE", str(settings_file))
