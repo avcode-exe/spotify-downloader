@@ -125,7 +125,8 @@ def upsert_track_state(
             "updated_at": now,
         },
     )
-    del state[1000:]
+    if len(state) > 1000:
+        state.pop()
 
 
 def summarize_track_state(state: list[dict[str, Any]]) -> dict[str, int]:
@@ -179,6 +180,7 @@ def update_paths_from_scan(state: list[dict[str, Any]], tracks: list[Any]) -> No
                 "first_seen": now,
                 "updated_at": now,
             }
-            state.append(new_entry)
+            state.insert(0, new_entry)
             index[key_str] = new_entry
-    del state[1000:]
+    if len(state) > 1000:
+        state.pop()

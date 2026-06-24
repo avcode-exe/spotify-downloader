@@ -30,13 +30,22 @@ jobs:
           pip install -r requirements.txt
           pip install pyinstaller
 
+      - name: Install UPX for compression
+        run: choco install upx -y
+
       - name: Build with PyInstaller
+        env:
+          PYTHONOPTIMIZE: "2"
         run: |
           if (-not (Test-Path assets)) { New-Item -ItemType Directory -Path assets }
           python generate_icon.py
+          $upxDir = ""
+          if (Test-Path upx\upx.exe) { $upxDir = "--upx-dir upx" }
+          if (-not $upxDir -and (Test-Path "C:\ProgramData\chocolatey\bin\upx.exe")) { $upxDir = "--upx-dir `"C:\ProgramData\chocolatey\bin`"" }
           pyinstaller --noconfirm --clean `
             --name "SpotifyDownloader" `
             --add-data "src;src" `
+            $upxDir `
             --exclude-module numpy `
             --exclude-module scipy `
             --exclude-module sklearn `
@@ -44,6 +53,9 @@ jobs:
             --exclude-module matplotlib `
             --exclude-module IPython `
             --exclude-module jupyter `
+            --exclude-module pytest `
+            --exclude-module mypy `
+            --exclude-module ruff `
             -s -w `
             gui_app.py
 

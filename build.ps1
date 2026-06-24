@@ -22,6 +22,8 @@ function Invoke-Clean {
             Write-Host "  Removed: $p" -ForegroundColor Gray
         }
     }
+    Get-ChildItem -Path . -Recurse -Directory -Filter "__pycache__" -ErrorAction SilentlyContinue |
+        Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
     Write-Host "Clean complete." -ForegroundColor Green
 }
 
@@ -73,11 +75,19 @@ $pyinstallerArgs = @(
     "--exclude-module", "matplotlib"
     "--exclude-module", "IPython"
     "--exclude-module", "jupyter"
+    "--exclude-module", "pytest"
+    "--exclude-module", "mypy"
+    "--exclude-module", "ruff"
     "-s"
     "-w"
     "gui_app.py"
 )
 
+if (Test-Path "upx\upx.exe") {
+    $pyinstallerArgs += @("--upx-dir", "upx")
+}
+
+$env:PYTHONOPTIMIZE = "2"
 pyinstaller @pyinstallerArgs
 
 if ($LASTEXITCODE -ne 0) {

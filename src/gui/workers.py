@@ -62,10 +62,10 @@ class SpotDLWorker:
         self._cancel_requested = False
         self._track_state = load_track_state()
         self._last_scan: list[Any] = []
-        # O(1) lookup index of the last scan, keyed by normalized track name.
-        # Rebuilt whenever `_last_scan` is refreshed.
         self._scan_index: dict[str, Any] = {}
         self._thread: Thread | None = None
+        self._log_buffer: list[str] = []
+        self._last_flush: float = 0.0
 
     def start_download(self, url: str, fresh: bool = False) -> None:
         self._thread = Thread(target=self._run_download, args=(url, fresh))
@@ -95,9 +95,19 @@ class SpotDLWorker:
         else:
             self._on_event(result)
 
+    def _emit_log(self, message: str) -> None:
+        self._log_buffer.append(message)
+        now = time.monotonic()
+        if now - self._last_flush > 0.1:
+            batch = "\n".join(self._log_buffer)
+            self._log_buffer.clear()
+            self._last_flush = now
+            if batch:
+                self._emit("log", {"message": batch})
+
     def _run_download(self, url: str, fresh: bool) -> None:
         try:
-            self._emit("log", {"message": f"▶ Starting download: {url}"})
+            self._log_buffer.append(f"▶ Starting download: {url}")
             self._emit(
                 "status", {"status": "Downloading…", "track": "—", "progress": 0.0}
             )
@@ -107,15 +117,10 @@ class SpotDLWorker:
                 self._emit("error", error="spotDL is not installed")
                 return
 
-            # Deno is optional (only needed for some age-restricted videos); a
-            # failed install should warn, not abort the whole download.
             if not asyncio.run(ensure_deno(spotdl_cmd)):
-                self._emit(
-                    "log",
-                    {
-                        "message": "⚠ Deno could not be installed. "
-                        "Age-restricted videos may fail; most downloads still work."
-                    },
+                self._log_buffer.append(
+                    "⚠ Deno could not be installed. "
+                    "Age-restricted videos may fail; most downloads still work."
                 )
 
             os.makedirs(self._output_folder, exist_ok=True)
@@ -143,7 +148,7 @@ class SpotDLWorker:
 
     def _run_retry(self, track_urls: list[str]) -> None:
         try:
-            self._emit("log", {"message": "🔄 Retrying failed tracks…"})
+            self._log_buffer.append("🔄 Retrying failed tracks…")
             self._emit(
                 "status",
                 {"status": "Retrying failed tracks…", "track": "—", "progress": 0.0},
@@ -155,17 +160,14 @@ class SpotDLWorker:
                 return
 
             if not asyncio.run(ensure_deno(spotdl_cmd)):
-                self._emit(
-                    "log",
-                    {
-                        "message": "⚠ Deno could not be installed. "
-                        "Age-restricted videos may fail; most downloads still work."
-                    },
+                self._log_buffer.append(
+                    "⚠ Deno could not be installed. "
+                    "Age-restricted videos may fail; most downloads still work."
                 )
 
             os.makedirs(self._output_folder, exist_ok=True)
             if not track_urls:
-                self._emit("log", {"message": "No failed tracks to retry."})
+                self._log_buffer.append("No failed tracks to retry.")
                 self._emit(
                     "done", data={"url": "", "output_folder": self._output_folder}
                 )
@@ -197,11 +199,14 @@ class SpotDLWorker:
         pending_done = False
         in_traceback = False
         rate_limit_hint_shown = False
+        self._log_buffer.clear()
+        self._last_flush = time.monotonic()
 
         sub_env = dict(os.environ)
         sub_env["PYTHONIOENCODING"] = "utf-8"
         sub_env["PYTHONLEGACYWINDOWSSTDIO"] = "1"
 
+        loop = None
         try:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
@@ -235,7 +240,7 @@ class SpotDLWorker:
                         pending_done = False
                         track_name = m.group(1).strip()
                         self._emit("track", {"track": track_name})
-                        self._emit("log", {"message": f"↓ {track_name}"})
+                        self._emit_log(f"↓ {track_name}")
                         continue
 
                     m = SKIPPED_RE.search(text)
@@ -246,9 +251,7 @@ class SpotDLWorker:
                         pending_done = True
                         self._emit("track", {"track": track_name})
                         self._record_completed_track(track_name, TrackStatus.SKIPPED)
-                        self._emit(
-                            "log", {"message": f"⏭ Skipped (duplicate): {track_name}"}
-                        )
+                        self._emit_log(f"⏭ Skipped (duplicate): {track_name}")
                         continue
 
                     m = DONE_RE.search(text)
@@ -306,20 +309,17 @@ class SpotDLWorker:
                     if ERROR_RE.search(text):
                         failed += 1
                         self._record_failed_track(text)
-                        self._emit("log", {"message": f"✗ {text}"})
+                        self._emit_log(f"✗ {text}")
                         if not rate_limit_hint_shown and is_rate_limit_error(text):
                             rate_limit_hint_shown = True
-                            self._emit(
-                                "log",
-                                {"message": _RATE_LIMIT_HINT},
-                            )
+                            self._emit_log(_RATE_LIMIT_HINT)
                         continue
 
                     text_lower = text.lower()
                     if "error" in text_lower or "fail" in text_lower:
-                        self._emit("log", {"message": text})
+                        self._emit_log(text)
                     else:
-                        self._emit("log", {"message": text})
+                        self._emit_log(text)
 
             return_code = loop.run_until_complete(proc.wait())
             elapsed_final = time.monotonic() - start_time
@@ -352,7 +352,7 @@ class SpotDLWorker:
                     },
                 )
                 if failed > 0:
-                    self._emit("log", {"message": _COMPLETE_TIP})
+                    self._emit_log(_COMPLETE_TIP)
                 if url:
                     self._emit(
                         "history",
@@ -364,10 +364,7 @@ class SpotDLWorker:
                         },
                     )
                 if failed > 0:
-                    self._emit(
-                        "log",
-                        {"message": _RETRY_HINT.format(failed=failed)},
-                    )
+                    self._emit_log(_RETRY_HINT.format(failed=failed))
             else:
                 self._emit(
                     "status",
@@ -377,13 +374,9 @@ class SpotDLWorker:
                         "progress": 0.0,
                     },
                 )
-                self._emit(
-                    "log", {"message": f"\n✗ spotDL exited with code {return_code}"}
-                )
+                self._emit_log(f"\n✗ spotDL exited with code {return_code}")
                 if failed > 0:
-                    self._emit(
-                        "log", {"message": f"{failed} track(s) failed to download"}
-                    )
+                    self._emit_log(f"{failed} track(s) failed to download")
                 if url:
                     self._emit(
                         "history",
@@ -395,10 +388,7 @@ class SpotDLWorker:
                         },
                     )
                 if failed > 0:
-                    self._emit(
-                        "log",
-                        {"message": _RETRY_HINT.format(failed=failed)},
-                    )
+                    self._emit_log(_RETRY_HINT.format(failed=failed))
         except asyncio.CancelledError:
             self._emit("status", {"status": "Cancelled", "track": "—", "progress": 0.0})
             if url:
@@ -420,7 +410,12 @@ class SpotDLWorker:
             except OSError as exc:
                 log = logging.getLogger("spotify_downloader")
                 log.error("Could not save track state | error=%s", exc)
-            loop.close()
+            if self._log_buffer:
+                batch = "\n".join(self._log_buffer)
+                self._log_buffer.clear()
+                self._emit("log", {"message": batch})
+            if loop is not None:
+                loop.close()
 
     def _record_completed_track(self, track_name: str, status: str) -> None:
         key = normalize_name(track_name)
@@ -477,5 +472,3 @@ class SpotDLWorker:
                 source="track-name",
                 error=text,
             )
-
-            save_track_state(self._track_state)

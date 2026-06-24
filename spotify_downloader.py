@@ -135,7 +135,6 @@ _VALID_PLAYLIST_ID_RE = re.compile(r"^[A-Za-z0-9]{22}$")
 
 def _setup_logger() -> logging.Logger:
     ensure_data_dir(LOG_FILE)
-    os.makedirs(LOG_DIR, exist_ok=True)
     logger = logging.getLogger("spotify_downloader")
     logger.setLevel(logging.DEBUG)
     if logger.handlers:

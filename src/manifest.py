@@ -3,9 +3,11 @@ from __future__ import annotations
 import re
 import unicodedata
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 from .models import AUDIO_EXTENSIONS, DuplicateGroup, LocalTrack
+
+_METADATA_CACHE: dict[Path, tuple[float, int, dict[str, Any]]] = {}
 
 SAFE_MOVE_REASONS = {"same normalized filename"}
 
@@ -30,6 +32,17 @@ def _first_audio_value(audio: object, key: str) -> str | None:
 
 def _read_audio_metadata(path: Path) -> dict[str, object]:
     try:
+        stat = path.stat()
+        mtime = stat.st_mtime
+        size = stat.st_size
+    except OSError:
+        return {}
+
+    cached = _METADATA_CACHE.get(path)
+    if cached is not None and cached[0] == mtime and cached[1] == size:
+        return cached[2]
+
+    try:
         import mutagen
 
         audio = mutagen.File(str(path), easy=True)
@@ -48,6 +61,7 @@ def _read_audio_metadata(path: Path) -> dict[str, object]:
         metadata["albumartist"] = _first_audio_value(audio, "albumartist")
         metadata["genre"] = _first_audio_value(audio, "genre")
         metadata["date"] = _first_audio_value(audio, "date")
+    _METADATA_CACHE[path] = (mtime, size, metadata)
     return metadata
 
 

@@ -6,6 +6,7 @@ import os
 import re
 import time
 import urllib.request
+from packaging.version import parse as parse_version
 from threading import Thread
 from typing import Any
 
@@ -399,7 +400,7 @@ class SpotifyDownloaderGUI(ctk.CTk):
                     with urllib.request.urlopen(req, timeout=8) as resp:
                         data = json.loads(resp.read().decode())
                     latest = data["info"]["version"]
-                    if latest > installed:
+                    if parse_version(latest) > parse_version(installed):
                         updates.append(f"{display_name} {installed} → {latest}")
                 except Exception:
                     pass

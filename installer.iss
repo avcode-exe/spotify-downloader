@@ -25,7 +25,8 @@ DisableProgramGroupPage=yes
 ; PrivilegesRequired=admin
 OutputDir=installer
 OutputBaseFilename=SpotifyDownloader_Setup
-Compression=lzma
+Compression=lzma2/ultra64
+LZMAUseSeparateProcess=yes
 SolidCompression=yes
 WizardStyle=modern
 ; SetupIconFile requires a valid .ico file; omit until a real icon is provided
@@ -42,11 +43,7 @@ Name: "quicklaunchicon"; Description: "{cm:CreateQuickLaunchIcon}"; GroupDescrip
 Name: "tui"; Description: "Install command-line TUI (Terminal UI) launcher and add spotify-downloader-tui to PATH"; GroupDescription: "Additional components"; Flags: unchecked
 
 [Files]
-Source: "dist\SpotifyDownloader\SpotifyDownloader.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "dist\SpotifyDownloader\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "requirements.txt"; DestDir: "{app}"; Flags: ignoreversion
-Source: "spotify_downloader.py"; DestDir: "{app}"; Flags: ignoreversion
-Source: "src\*"; DestDir: "{app}\src"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "installer\spotify-downloader-tui.bat"; DestDir: "{app}"; Flags: ignoreversion; Tasks: tui
 
 [Icons]
@@ -70,7 +67,10 @@ begin
   PsFile := ExpandConstant('{tmp}\add_to_path.ps1');
   PsCmd := Format('$p = [Environment]::GetEnvironmentVariable("Path", "User")' + #13#10 +
     'if ($p -notlike "*%s*") {' + #13#10 +
-    '  [Environment]::SetEnvironmentVariable("Path", $p + ";%s", "User")' + #13#10 +
+    '  $newPath = $p + ";%s"' + #13#10 +
+    '  if ($newPath.Length -lt 2048) {' + #13#10 +
+    '    [Environment]::SetEnvironmentVariable("Path", $newPath, "User")' + #13#10 +
+    '  } else { Write-Host "PATH too long, skipping addition." }' + #13#10 +
     '}', [AppPath, AppPath]);
   SaveStringToFile(PsFile, PsCmd, False);
   Exec('powershell.exe', '-NoProfile -ExecutionPolicy Bypass -File "' + PsFile + '"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
