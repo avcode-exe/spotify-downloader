@@ -36,8 +36,6 @@ goto :clean
 echo.
 echo [4/5] Building executable...
 set PYTHONOPTIMIZE=2
-set UPX_OPTS=
-if exist "upx\upx.exe" set UPX_OPTS=--upx-dir upx
 pyinstaller --noconfirm --clean ^
     --name "SpotifyDownloader" ^
     --add-data "src;src" ^
@@ -52,7 +50,6 @@ pyinstaller --noconfirm --clean ^
     --exclude-module mypy ^
     --exclude-module ruff ^
     -s -w ^
-    %UPX_OPTS% ^
     gui_app.py
 
 echo.
