@@ -2,7 +2,7 @@
 ; Requires Inno Setup 6.0 or later: https://jrsoftware.org/isdl.php
 
 #define MyAppName "Spotify Downloader"
-#define MyAppVersion "1.0"
+#define MyAppVersion "0.1.0"
 #define MyAppPublisher "Your Name"
 #define MyAppURL "https://github.com/avcode-exe/spotify-downloader"
 #define MyAppExeName "SpotifyDownloader.exe"
@@ -43,7 +43,7 @@ Name: "quicklaunchicon"; Description: "{cm:CreateQuickLaunchIcon}"; GroupDescrip
 Name: "tui"; Description: "Install command-line TUI (Terminal UI) launcher and add spotify-downloader-tui to PATH"; GroupDescription: "Additional components"; Flags: unchecked
 
 [Files]
-Source: "dist\SpotifyDownloader\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "dist\SpotifyDownloader\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs
 Source: "installer\spotify-downloader-tui.bat"; DestDir: "{app}"; Flags: ignoreversion; Tasks: tui
 
 [Icons]
