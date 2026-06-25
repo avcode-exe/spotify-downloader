@@ -60,7 +60,6 @@ class SpotifyDownloaderGUI(ctk.CTk):
         self._download_start_time = 0.0
         # Failed-track URLs are owned by the controller (not the worker) so that
         # Retry survives a worker being replaced for a new download.
-        self._failed_tracks: list[str] = []
 
         self._build_ui()
         self._apply_settings_to_ui()

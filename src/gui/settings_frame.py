@@ -178,7 +178,7 @@ class SettingsFrame(ctk.CTkFrame):
             row,
             variable=variable,
             values=display_options,
-            command=lambda _value, vm=value_map: self._on_browser_changed(vm),
+            command=lambda _value, vm=value_map: self._on_browser_changed(vm, _value),
             height=36,
             corner_radius=6,
             font=FONT_BUTTON,

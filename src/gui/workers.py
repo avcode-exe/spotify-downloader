@@ -100,7 +100,8 @@ class SpotDLWorker:
                             stderr=subprocess.DEVNULL,
                         )
                     else:
-                        os.killpg(os.getpgid(pid), signal.SIGTERM)
+                        if hasattr(os, "killpg") and hasattr(os, "getpgid"):
+                            os.killpg(os.getpgid(pid), signal.SIGTERM)  # type: ignore[attr-defined]
             except (ProcessLookupError, OSError):
                 pass
 
