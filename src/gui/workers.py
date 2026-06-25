@@ -148,7 +148,9 @@ class SpotDLWorker:
             try:
                 os.makedirs(self._output_folder, exist_ok=True)
             except PermissionError:
-                self._emit("error", error=f"Cannot create output folder: {self._output_folder}")
+                self._emit(
+                    "error", error=f"Cannot create output folder: {self._output_folder}"
+                )
                 return
             try:
                 self._last_scan = scan_output_folder(self._output_folder)
@@ -203,7 +205,9 @@ class SpotDLWorker:
             try:
                 os.makedirs(self._output_folder, exist_ok=True)
             except PermissionError:
-                self._emit("error", error=f"Cannot create output folder: {self._output_folder}")
+                self._emit(
+                    "error", error=f"Cannot create output folder: {self._output_folder}"
+                )
                 return
             try:
                 self._last_scan = scan_output_folder(self._output_folder)

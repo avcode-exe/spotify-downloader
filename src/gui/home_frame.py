@@ -68,7 +68,10 @@ class HomeFrame(ctk.CTkFrame):
         input_card.pack(fill="x", pady=(0, 16))
 
         url_label = ctk.CTkLabel(
-            input_card, text="Playlist or Track URL", font=FONT_BUTTON, text_color=SPOTIFY_WHITE
+            input_card,
+            text="Playlist or Track URL",
+            font=FONT_BUTTON,
+            text_color=SPOTIFY_WHITE,
         )
         url_label.pack(anchor="w", padx=16, pady=(16, 6))
 
