@@ -148,11 +148,12 @@ class SpotDLWorker:
 
             try:
                 os.makedirs(self._output_folder, exist_ok=True)
-            except PermissionError:
+            except OSError:
                 self._emit(
                     "error", error=f"Cannot create output folder: {self._output_folder}"
                 )
                 return
+
             try:
                 self._last_scan = scan_output_folder(self._output_folder)
                 self._scan_index = {t.normalized_name: t for t in self._last_scan}
@@ -205,7 +206,7 @@ class SpotDLWorker:
 
             try:
                 os.makedirs(self._output_folder, exist_ok=True)
-            except PermissionError:
+            except OSError:
                 self._emit(
                     "error", error=f"Cannot create output folder: {self._output_folder}"
                 )
@@ -516,6 +517,7 @@ class SpotDLWorker:
         track_name_m = re.search(r"Failed to download\s+(.+)", text, re.IGNORECASE)
         if track_name_m:
             track_name = track_name_m.group(1).strip()
+            self._emit("failed", {"url": track_name})
             key = normalize_name(track_name)
             upsert_track_state(
                 self._track_state,

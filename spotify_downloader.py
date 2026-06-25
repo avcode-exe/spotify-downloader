@@ -13,6 +13,8 @@ import logging
 import os
 import re
 import shutil
+import signal
+import subprocess
 import sys
 import time
 import urllib.request
@@ -703,9 +705,6 @@ class SpotifyDownloader(App):
             e["key"]
             for e in self._track_state
             if e.get("status") == TrackStatus.FAILED
-            and e.get("key", "").startswith(
-                ("https://open.spotify.com/track/", "spotify:track:")
-            )
         ]
         self._duplicate_groups: list[Any] = []
         self._last_scan: list[LocalTrack] = []
@@ -1408,6 +1407,19 @@ class SpotifyDownloader(App):
                         log.debug("spotDL process already exited after kill")
                     except Exception as exc:
                         log.warning("Error killing spotDL process: %s", exc)
+                pid = self._process.pid
+                if pid:
+                    try:
+                        if os.name == "nt":
+                            subprocess.run(
+                                ["taskkill", "/F", "/T", "/PID", str(pid)],
+                                stdout=subprocess.DEVNULL,
+                                stderr=subprocess.DEVNULL,
+                            )
+                        elif hasattr(os, "killpg") and hasattr(os, "getpgid"):
+                            os.killpg(os.getpgid(pid), signal.SIGTERM)  # type: ignore[attr-defined]
+                    except (ProcessLookupError, OSError):
+                        pass
             except ProcessLookupError:
                 log.debug("spotDL process already exited")
             except Exception as exc:
@@ -1482,6 +1494,8 @@ class SpotifyDownloader(App):
         track_name_m = re.search(r"Failed to download\s+(.+)", text, re.IGNORECASE)
         if track_name_m:
             track_name = track_name_m.group(1).strip()
+            if track_name not in self._failed_tracks:
+                self._failed_tracks.append(track_name)
             key = normalize_name(track_name)
             upsert_track_state(
                 self._track_state,
@@ -1898,7 +1912,7 @@ class SpotifyDownloader(App):
             )
         try:
             os.makedirs(out, exist_ok=True)
-        except PermissionError:
+        except OSError:
             self._log(f"[bold red]✗[/] Cannot create output folder: [bold]{out}[/]")
             self._unlock_ui()
             return
@@ -1966,7 +1980,7 @@ class SpotifyDownloader(App):
             )
         try:
             os.makedirs(out, exist_ok=True)
-        except PermissionError:
+        except OSError:
             self._log(f"[bold red]✗[/] Cannot create output folder: [bold]{out}[/]")
             self._unlock_ui()
             return
@@ -2028,7 +2042,7 @@ class SpotifyDownloader(App):
             )
         try:
             os.makedirs(out, exist_ok=True)
-        except PermissionError:
+        except OSError:
             self._log(f"[bold red]✗[/] Cannot create output folder: [bold]{out}[/]")
             self._unlock_ui()
             return

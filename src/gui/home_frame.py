@@ -58,7 +58,7 @@ class HomeFrame(ctk.CTkFrame):
 
         subtitle = ctk.CTkLabel(
             header,
-            text="Paste a public playlist URL and press Download",
+            text="Paste a public playlist or track URL and press Download",
             font=FONT_SUBTITLE,
             text_color=SPOTIFY_LIGHT_GRAY,
         )

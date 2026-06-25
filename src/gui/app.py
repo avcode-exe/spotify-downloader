@@ -48,12 +48,7 @@ class SpotifyDownloaderGUI(ctk.CTk):
         self._history = self._load_history()
         self._track_state = load_track_state()
         self._failed_tracks = [
-            e["key"]
-            for e in self._track_state
-            if e.get("status") == TrackStatus.FAILED
-            and e.get("key", "").startswith(
-                ("https://open.spotify.com/track/", "spotify:track:")
-            )
+            e["key"] for e in self._track_state if e.get("status") == TrackStatus.FAILED
         ]
         self._worker: SpotDLWorker | None = None
         self._confirm_clean_until = 0.0

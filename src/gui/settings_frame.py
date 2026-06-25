@@ -152,10 +152,12 @@ class SettingsFrame(ctk.CTkFrame):
     ) -> None:
         if options and isinstance(options[0], tuple):
             display_options = [opt[0] for opt in options]
-            value_map = {opt[0]: opt[1] for opt in options}
+            value_to_display = {opt[1]: opt[0] for opt in options}
+            display_to_value = {opt[0]: opt[1] for opt in options}
         else:
             display_options = [str(opt) for opt in options]
-            value_map = {str(opt): str(opt) for opt in options}
+            value_to_display = {str(opt): str(opt) for opt in options}
+            display_to_value = {str(opt): str(opt) for opt in options}
 
         row = ctk.CTkFrame(parent, fg_color="transparent")
         row.pack(fill="x", pady=(0, 10))
@@ -171,14 +173,16 @@ class SettingsFrame(ctk.CTkFrame):
         label_widget.pack(side="left", padx=(0, 12))
 
         current_value = variable.get()
-        resolved_value = value_map.get(current_value, current_value)
+        resolved_value = value_to_display.get(current_value, current_value)
         variable.set(resolved_value)
 
         option = ctk.CTkOptionMenu(
             row,
             variable=variable,
             values=display_options,
-            command=lambda _value, vm=value_map: self._on_browser_changed(vm, _value),
+            command=lambda _value, vm=display_to_value: self._on_browser_changed(
+                vm, _value
+            ),
             height=36,
             corner_radius=6,
             font=FONT_BUTTON,

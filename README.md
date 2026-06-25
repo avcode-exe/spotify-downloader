@@ -1,4 +1,4 @@
-# Spotify Playlist Downloader 🎵
+# Spotify Playlist Downloader v0.1.1 🎵
 
 A terminal/GUI app that downloads Spotify playlists and individual tracks by matching to
 YouTube Music (via [spotDL](https://github.com/spotDL/spotify-downloader)).
@@ -11,7 +11,7 @@ YouTube Music (via [spotDL](https://github.com/spotDL/spotify-downloader)).
 - **Modern GUI (optional)** — Lightweight desktop app built with [CustomTkinter](https://github.com/TomSchimansky/CustomTkinter) (Windows/macOS/Linux)
 - **Playlist & Track Downloads** — Paste any public Spotify playlist or individual track URL
 - **Fresh Download Mode** — Overwrite existing files for a clean re-download
-- **Retry Failed** — Automatically retry tracks that failed to download
+- **Retry Failed** — Automatically retry tracks that failed to download (now tracks all failed tracks, not just playlist tracks)
 - **Download History** — View your past download sessions with status and timestamps
 - **Progress Tracking** — Real-time progress bar, tracks/min rate, and ETA
 - **Duplicate Detection** — Skipped (already-downloaded) tracks count toward progress for consistency
@@ -19,9 +19,11 @@ YouTube Music (via [spotDL](https://github.com/spotDL/spotify-downloader)).
 - **Auto-Extract Cookies** — One-click cookie extraction with smart multi-browser fallback (tries Firefox first on Windows to avoid locked databases)
 - **Cookie File Warnings** — Detects missing/expired cookies and YouTube rate-limiting, with actionable guidance
 - **Rate-Limit Detection** — Warns when YouTube is blocking downloads and suggests setting a cookie file
-- **Cancellation** — Cancel any in-progress download at any time
+- **Cancellation** — Cancel any in-progress download at any time (now kills the entire spotDL process tree)
 - **Cross-Platform** — Works on Windows, macOS, and Linux
 - **198 unit tests** — Full coverage of URL validation, proxy handling, state persistence, duplicate logic, and UI utilities
+- **Improved error handling** — Folder creation catches `OSError` instead of just `PermissionError`
+- **Safer metadata cache eviction** — Uses `pop(key, None)` to avoid race conditions during cache cleanup
 
 ## Requirements
 
@@ -276,9 +278,10 @@ To download the artifact:
 ### TUI (Terminal UI)
 
 1. Run `python spotify_downloader.py`
-2. Paste a **public** Spotify playlist URL into the top field
-   - Valid format: `https://open.spotify.com/playlist/<22-char-id>` (e.g. `https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M`)
-   - URI format also accepted: `spotify:playlist:<22-char-id>`
+2. Paste a **public** Spotify playlist or track URL into the top field
+   - Playlist: `https://open.spotify.com/playlist/<22-char-id>` (e.g. `https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M`)
+   - Track: `https://open.spotify.com/track/<11-char-id>` (e.g. `https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT`)
+   - URI format also accepted: `spotify:playlist:<22-char-id>` or `spotify:track:<11-char-id>`
 3. Choose an output folder (default: `./downloads`)
 4. Click **Download** (or **⟳ Fresh** to overwrite existing files)
 5. Watch the progress — spotDL will fetch metadata, find matching audio on
@@ -287,9 +290,10 @@ To download the artifact:
 ### GUI (Desktop App)
 
 1. Run `python gui_app.py`
-2. Paste a **public** Spotify playlist URL into the top field
-   - Valid format: `https://open.spotify.com/playlist/<22-char-id>` (e.g. `https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M`)
-   - URI format also accepted: `spotify:playlist:<22-char-id>`
+2. Paste a **public** Spotify playlist or track URL into the top field
+   - Playlist: `https://open.spotify.com/playlist/<22-char-id>` (e.g. `https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M`)
+   - Track: `https://open.spotify.com/track/<11-char-id>` (e.g. `https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT`)
+   - URI format also accepted: `spotify:playlist:<22-char-id>` or `spotify:track:<11-char-id>`
 3. Choose an output folder (default: `./downloads`)
 4. Click **▶ Download** or **⟳ Fresh** to start
 5. Use **🔎 Preview** and **📋 Duplicates** buttons to toggle panels
@@ -304,7 +308,7 @@ To download the artifact:
 | ▶ **Download** | Download the playlist (skips already-downloaded tracks) |
 | 🔄 **Retry Failed** | Re-download only the tracks that failed in the last session |
 | ⟳ **Fresh** | Download everything, overwriting existing files |
-| ⏹ **Cancel** | Cancel the current download |
+| ⏹ **Cancel** | Cancel the current download (terminates the entire spotDL process tree) |
 | ✕ **Quit** | Exit the application |
 
 ### GUI Buttons
@@ -316,7 +320,7 @@ To download the artifact:
 | ⟳ **Fresh** | Download everything, overwriting existing files |
 | 🔎 **Preview** | Toggle the preview panel (shows local files and duplicates) |
 | 📋 **Duplicates** | Toggle the duplicates panel (shows duplicate groups) |
-| ⏹ **Cancel** | Cancel the current download |
+| ⏹ **Cancel** | Cancel the current download (terminates the entire spotDL process tree) |
 | ✕ **Quit** | Exit the application |
 
 ## Settings
@@ -331,7 +335,7 @@ Open the **⚙ Settings** panel to configure:
 | **Bitrate** | Audio bitrate: Auto (default), 64k–320k, or disable conversion |
 | **Audio source** | Audio provider: YouTube Music (default), YouTube, SoundCloud, Bandcamp, Piped |
 | **Proxy** | HTTP / HTTPS / SOCKS4 / SOCKS5 proxy URL for bypassing regional restrictions |
-| **Cookies from** | Select a browser or **Auto (try all)** — tries Firefox first, then Chrome, Edge, Brave, Vivaldi |
+| **Browser** | Select a browser for cookie extraction: Auto (try all), Chrome, Firefox, Edge, Brave, Vivaldi |
 | **Extract** | Click to auto-extract cookies. In Auto mode, tries each browser until one succeeds |
 | **Cookie file** | Path to a `cookies.txt` file (Netscape format) for authenticated YouTube access |
 
@@ -348,6 +352,7 @@ The GUI **Settings** panel provides the same options in a desktop-friendly layou
 | **Audio source** | YouTube Music, YouTube, SoundCloud, Bandcamp, Piped |
 | **Duplicate policy** | Skip or metadata-based duplicate handling |
 | **Proxy** | HTTP / HTTPS / SOCKS4 / SOCKS5 proxy URL |
+| **Browser** | Browser for cookie extraction: Auto, Chrome, Firefox, Edge, Brave, Vivaldi |
 | **Cookie file** | Path to a `cookies.txt` file |
 
 All settings are saved to `~/.spotdl/settings.json` and restored on restart.
@@ -447,7 +452,7 @@ python3 -m pip install -r requirements.txt
 
 ## Notes
 
-- Only **public** playlists work (private playlists will fail).
+- Only **public** playlists and tracks work (private playlists/tracks will fail).
 - Audio quality depends on what YouTube Music offers (typically 128–256 kbps).
 - Downloading copyrighted music may violate Spotify's ToS and local copyright laws in your country.
 - YouTube cookies expire periodically (every few weeks) — re-extract when downloads start failing.

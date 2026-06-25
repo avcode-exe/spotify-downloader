@@ -65,10 +65,9 @@ def _read_audio_metadata(path: Path) -> dict[str, object]:
     _METADATA_CACHE[path] = (mtime, size, metadata)
     if len(_METADATA_CACHE) > _METADATA_CACHE_MAXSIZE:
         excess = len(_METADATA_CACHE) - _METADATA_CACHE_MAXSIZE + 64
-        for i, key in enumerate(_METADATA_CACHE):
-            if i >= excess:
-                break
-            _METADATA_CACHE.pop(key)
+        keys_to_remove = list(_METADATA_CACHE.keys())[:excess]
+        for key in keys_to_remove:
+            _METADATA_CACHE.pop(key, None)
     return metadata
 
 
