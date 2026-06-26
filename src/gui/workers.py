@@ -23,6 +23,7 @@ from src.spotdl_tools import (
     ensure_deno,
     find_spotdl,
     is_rate_limit_error,
+    validate_and_ensure_deno,
     validate_spotdl,
 )
 from src.state import (
@@ -136,11 +137,12 @@ class SpotDLWorker:
             )
 
             spotdl_cmd = find_spotdl()
-            if not asyncio.run(validate_spotdl(spotdl_cmd)):
+            spotdl_ok, deno_ok = asyncio.run(validate_and_ensure_deno(spotdl_cmd))
+            if not spotdl_ok:
                 self._emit("error", error="spotDL is not installed")
                 return
 
-            if not asyncio.run(ensure_deno(spotdl_cmd)):
+            if not deno_ok:
                 self._log_buffer.append(
                     "⚠ Deno could not be installed. "
                     "Age-restricted videos may fail; most downloads still work."
@@ -194,11 +196,12 @@ class SpotDLWorker:
             )
 
             spotdl_cmd = find_spotdl()
-            if not asyncio.run(validate_spotdl(spotdl_cmd)):
+            spotdl_ok, deno_ok = asyncio.run(validate_and_ensure_deno(spotdl_cmd))
+            if not spotdl_ok:
                 self._emit("error", error="spotDL is not installed")
                 return
 
-            if not asyncio.run(ensure_deno(spotdl_cmd)):
+            if not deno_ok:
                 self._log_buffer.append(
                     "⚠ Deno could not be installed. "
                     "Age-restricted videos may fail; most downloads still work."

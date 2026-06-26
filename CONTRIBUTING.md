@@ -32,7 +32,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 
 # 5. Verify everything works
-python -m py_compile spotify_downloader.py
+python -m pytest tests/ -v --tb=short
 ```
 
 ## Platform-Specific Setup
@@ -50,8 +50,8 @@ conda activate spotify-dev
 # Install dependencies
 pip install -r requirements.txt
 
-# Verify compilation
-python -m py_compile spotify_downloader.py
+# Verify tests pass
+python -m pytest tests/ -v --tb=short
 ```
 
 **Windows notes:**
@@ -75,8 +75,8 @@ source .venv/bin/activate
 # Install dependencies
 pip install -r requirements.txt
 
-# Verify compilation
-python -m py_compile spotify_downloader.py
+# Verify tests pass
+python -m pytest tests/ -v --tb=short
 ```
 
 **macOS notes:**
@@ -97,8 +97,8 @@ source .venv/bin/activate
 # Install dependencies
 pip install -r requirements.txt
 
-# Verify compilation
-python -m py_compile spotify_downloader.py
+# Verify tests pass
+python -m pytest tests/ -v --tb=short
 ```
 
 ### Linux (Fedora/RHEL)
@@ -108,7 +108,7 @@ sudo dnf install python3 python3-pip ffmpeg git
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-python -m py_compile spotify_downloader.py
+python -m pytest tests/ -v --tb=short
 ```
 
 ### Linux (Arch/Manjaro)
@@ -118,53 +118,61 @@ sudo pacman -S python python-pip ffmpeg git
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-python -m py_compile spotify_downloader.py
+python -m pytest tests/ -v --tb=short
 ```
 
-## Running the App
+## Running the Apps
 
-```bash
-python spotify_downloader.py
-```
+The project ships with **two** front-ends:
 
-The app launches a Textual TUI. Use mouse or keyboard to navigate.
+| App | Entry point | Framework |
+|-----|-------------|-----------|
+| **TUI** (terminal UI) | `python spotify_downloader.py` | [Textual](https://textual.textualize.io/) |
+| **GUI** (desktop UI) | `python gui_app.py` | [CustomTkinter](https://github.com/TomSchimansky/CustomTkinter) |
+
+Both share the same core logic in `src/`. Changes to `src/` affect both front-ends.
 
 ## Project Structure
 
 ```
 spotify_downloader/
+├── scripts/
+│   ├── __init__.py
+│   └── write_version_include.py   # Generates installer/_version.iss
 ├── src/
-│   ├── gui/               # CustomTkinter desktop GUI
-│   │   ├── app.py
-│   │   ├── home_frame.py
-│   │   ├── settings_frame.py
-│   │   ├── preview_frame.py
-│   │   ├── duplicates_frame.py
-│   │   ├── history_frame.py
-│   │   ├── log_frame.py
-│   │   ├── workers.py
-│   │   ├── utils.py
-│   │   └── theme.py
-│   ├── models.py
-│   ├── state.py
-│   ├── spotdl_tools.py
-│   ├── manifest.py
-│   └── duplicates.py
-├── gui_app.py             # GUI entry point
-├── spotify_downloader.py  # TUI entry point
+│   ├── gui/                       # CustomTkinter desktop GUI
+│   │   ├── app.py                 # Main GUI application
+│   │   ├── home_frame.py          # Playlist URL and download controls
+│   │   ├── settings_frame.py      # Settings panel
+│   │   ├── preview_frame.py       # Local file preview
+│   │   ├── duplicates_frame.py    # Duplicate group display
+│   │   ├── history_frame.py       # Download history
+│   │   ├── log_frame.py           # Live log output
+│   │   ├── workers.py             # Background spotDL execution
+│   │   ├── utils.py               # Formatting helpers
+│   │   └── theme.py               # Shared theme (colors, fonts)
+│   ├── models.py                  # Shared dataclasses and constants
+│   ├── state.py                   # Per-track state persistence
+│   ├── spotdl_tools.py            # spotDL command and dependency helpers
+│   ├── manifest.py                # Local scan and duplicate grouping
+│   └── duplicates.py              # Duplicate move/quarantine logic
+├── gui_app.py                     # GUI entry point
+├── spotify_downloader.py          # TUI entry point
+├── installer.iss                  # Inno Setup script for Windows installer
+├── build.ps1 / build.bat          # Windows EXE build scripts
 ├── requirements.txt
-├── build.ps1 / build.bat  # Windows EXE build scripts
-├── installer.iss          # Inno Setup script
+├── tests/                         # 208 pytest unit tests
 └── README.md
 ```
 
 ## Code Style
 
-- **Formatter:** We recommend [ruff](https://docs.astral.sh/ruff/) or
-  [black](https://black.readthedocs.io/) for auto-formatting.
-- **Linter:** [ruff](https://docs.astral.sh/ruff/) is recommended.
-- **Type hints:** Use Python 3.10+ type hints (`list[str]`, `str | None`, etc.)
-- **Docstrings:** Use Google-style docstrings for public methods.
+- **Formatter:** [ruff](https://docs.astral.sh/ruff/) (configured for black-compatible formatting)
+- **Linter:** ruff
+- **Type checker:** [mypy](https://mypy.readthedocs.io/)
+- **Tests:** [pytest](https://docs.pytest.org/) (208 tests, 2 skipped on Windows)
+- **Type hints:** Use Python 3.10+ syntax (`list[str]`, `str | None`, etc.)
+- **Docstrings:** Google-style for public methods and modules
 - **Imports:** Group in order: stdlib, third-party, local. Alphabetical within groups.
 - **Naming:** `snake_case` for functions/variables, `PascalCase` for classes.
 
@@ -172,44 +180,58 @@ spotify_downloader/
 
 ```bash
 # Install dev tools
-pip install ruff
+pip install ruff mypy pytest
 
 # Check for lint issues
-ruff check spotify_downloader.py
+ruff check scripts/ spotify_downloader.py gui_app.py installer.py src/ tests/
 
 # Auto-fix lint issues
-ruff check --fix spotify_downloader.py
+ruff check --fix scripts/ spotify_downloader.py gui_app.py installer.py src/ tests/
 
 # Format code
-ruff format spotify_downloader.py
+ruff format scripts/ spotify_downloader.py gui_app.py installer.py src/ tests/
+
+# Run full test suite
+python -m pytest tests/ -v --tb=short
+
+# Type check
+python -m mypy scripts/ src/ gui_app.py installer.py --ignore-missing-imports
 ```
 
 ## Testing
 
-This project currently relies on manual testing via the TUI. To verify your
-changes compile and the app launches:
+This project has a comprehensive pytest suite covering URL validation, proxy handling,
+state persistence, duplicate logic, GUI themes, workers, and more.
 
 ```bash
-# 1. Verify no syntax errors
-python -m py_compile spotify_downloader.py
+# Run all tests
+python -m pytest tests/ -v --tb=short
 
-# 2. Launch the app and test manually
-python spotify_downloader.py
+# Run a specific test file
+python -m pytest tests/test_spotdl_tools.py -v --tb=short
 
-# 3. Test a download with a public playlist
-#    - Paste a playlist URL
-#    - Click Download
-#    - Verify progress tracking works
-#    - Check that files are saved to ./downloads
-
-# 4. Test edge cases
-#    - Cancel a download mid-progress
-#    - Retry failed tracks
-#    - Fresh download (overwrite mode)
-#    - Toggle settings panel
-#    - Extract cookies from browser
-#    - Check download history
+# Run with coverage
+pip install pytest-cov
+python -m pytest tests/ --cov=src --cov-report=term-missing
 ```
+
+### Manual testing checklist
+
+After running the automated tests, verify the following manually:
+
+1. **TUI** — `python spotify_downloader.py`
+   - Paste a public Spotify playlist URL
+   - Click Download, watch progress
+   - Test Fresh mode, Retry Failed, Cancel
+   - Toggle Settings, Preview, and History panels
+   - Extract cookies from browser
+
+2. **GUI** — `python gui_app.py`
+   - Same feature set as the TUI, verified via the desktop UI
+   - Confirm settings persist across restarts
+
+3. **Build** — `.\build.ps1` (Windows)
+   - Verifies PyInstaller EXE and Inno Setup installer both compile
 
 ## Making Changes
 
@@ -218,49 +240,79 @@ python spotify_downloader.py
    git checkout -b feature/my-feature
    ```
 
-2. **Make your changes** in `spotify_downloader.py`.
+2. **Make your changes** — core logic lives in `src/`, TUI in `spotify_downloader.py`,
+   GUI in `src/gui/`.
 
-3. **Verify compilation:**
+3. **Run the linter and formatter:**
    ```bash
-   python -m py_compile spotify_downloader.py
+   ruff check . && ruff format .
    ```
 
-4. **Test manually** by running the app.
-
-5. **Commit** with a clear message:
+4. **Run the test suite:**
    ```bash
-   git add spotify_downloader.py
+   python -m pytest tests/ -v --tb=short
+   ```
+
+5. **Type-check:**
+   ```bash
+   python -m mypy src/ gui_app.py installer.py scripts/ --ignore-missing-imports
+   ```
+
+6. **Test manually** by running the TUI and/or GUI.
+
+7. **Commit** with a clear message:
+   ```bash
+   git add -A
    git commit -m "Add: description of your change"
    ```
 
-6. **Push** and open a Pull Request.
+8. **Push** and open a Pull Request.
 
 ## Commit Messages
 
 Use these prefixes:
-- `Add:` — new feature or capability
-- `Fix:` — bug fix
-- `Update:` — improvement to existing feature
-- `Refactor:` — code restructuring without behavior change
-- `Docs:` — documentation only
-- `Remove:` — removing code or features
+
+| Prefix | Purpose |
+|--------|---------|
+| `Add:` | New feature or capability |
+| `Fix:` | Bug fix |
+| `Update:` | Improvement to existing feature |
+| `Refactor:` | Code restructuring without behavior change |
+| `Docs:` | Documentation only |
+| `Remove:` | Removing code or features |
+
+## Version Changes
+
+The application version is the single source of truth in `src/__init__.py` (`__version__`).
+The build scripts automatically propagate it to the Inno Setup installer. When changing the
+version, edit only `src/__init__.py` and run the build script — no other files need updating.
 
 ## Pull Request Guidelines
 
 - Keep PRs focused — one feature or fix per PR.
 - Describe what changed and why in the PR description.
 - Include screenshots if you changed UI elements.
-- Make sure `python -m py_compile spotify_downloader.py` passes.
+- Ensure `ruff check .` and `ruff format --check .` pass.
+- Ensure all 208 tests pass (`python -m pytest tests/ -v`).
 - Test on at least one platform before submitting.
+- If your change affects the installer or build scripts, verify `.\build.ps1` succeeds.
 
 ## Reporting Issues
 
 When reporting a bug, include:
+
 - Operating system and Python version
 - spotDL version (`spotdl --version`)
 - Steps to reproduce
 - Relevant log output (from `~/.spotdl/app.log`)
 - Screenshots if applicable
+
+## Continuous Integration
+
+The project runs a CI pipeline on every push and PR (`.github/workflows/ci.yml`) across
+**Ubuntu**, **macOS**, and **Windows** with **Python 3.11**, **3.12**, and **3.13**.
+Jobs include linting, formatting, full test suite, mypy type-checking, compile verification,
+and import smoke tests.
 
 ## License
 

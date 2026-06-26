@@ -1,17 +1,27 @@
 ; Inno Setup script for Spotify Downloader
 ; Requires Inno Setup 6.0 or later: https://jrsoftware.org/isdl.php
+;
+; MyAppVersion is generated from src/__version__ by
+; scripts/write_version_include.py into installer/_version.iss.
+; Run `python -m scripts.write_version_include` (or use build.ps1 / build.bat)
+; before invoking ISCC.
 
 #define MyAppName "Spotify Downloader"
-#define MyAppVersion "0.1.1"
+#include "installer\_version.iss"
 #define MyAppPublisher "Your Name"
 #define MyAppURL "https://github.com/avcode-exe/spotify-downloader"
 #define MyAppExeName "SpotifyDownloader.exe"
 #define MyAppAssocName MyAppName + " File"
 #define MyAppAssocExt ".spotifydownloader"
 #define MyAppAssocKey StringChange(MyAppAssocName, " ", "") + MyAppAssocExt
+; AppId must be a stable GUID so Windows can detect/upgrade existing installs.
+; Generated once via uuid.uuid5(NAMESPACE_DNS, 'SpotifyDownloader-1.0.0').
+; Inline `{{...}}` escapes the literal braces so the parser doesn't treat the
+; value as a constant reference.
+#define MyAppId "{{9D76874D-FCC0-5857-A213-4AB2B409356D}}"
 
 [Setup]
-AppId={#emit GUIDFromText("SpotifyDownloader-1.0.0")}
+AppId={#MyAppId}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppVerName={#MyAppName} {#MyAppVersion}

@@ -60,6 +60,14 @@ echo ============================================
 
 echo.
 echo [5/5] Building installer with Inno Setup...
+echo   Regenerating installer\_version.iss from src\__version__...
+python -m scripts.write_version_include
+if errorlevel 1 (
+    echo ERROR: Failed to generate installer\_version.iss.
+    pause
+    exit /b 1
+)
+
 set "ISCC="
 if exist "C:\Program\ISCC.exe" set "ISCC=C:\Program\ISCC.exe"
 if not defined ISCC if exist "C:\Program Files\Inno Setup 6\ISCC.exe" set "ISCC=C:\Program Files\Inno Setup 6\ISCC.exe"
@@ -104,6 +112,7 @@ if exist SpotifyDownloader.spec del /q SpotifyDownloader.spec
 if exist SpotifyDownloader_Installer.exe del /q SpotifyDownloader_Installer.exe
 if exist installer\SpotifyDownloader_Setup.exe del /q installer\SpotifyDownloader_Setup.exe
 if exist installer\SpotifyDownloader_Setup_files rmdir /s /q installer\SpotifyDownloader_Setup_files
+if exist installer\_version.iss del /q installer\_version.iss
 echo Clean complete.
 echo.
 

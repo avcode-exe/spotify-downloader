@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Generate a minimal valid Windows icon file (1x1 black pixel)."""
+"""Generate a minimal valid Windows icon file (1x1 black pixel).
+
+This produces a technically valid ICO file suitable as a build-time
+placeholder. Replace with a proper application icon (e.g. 256x256 PNG
+converted to .ico) before release.
+"""
 
 from __future__ import annotations
 

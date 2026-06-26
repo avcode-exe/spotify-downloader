@@ -75,7 +75,7 @@ DEFAULT_SETTINGS: dict[str, str] = {
     "cookie_file": "",
     "browser": "auto",
     "duplicate_policy": "skip",
-    "use_cache_file": "true",
+    "use_cache_file": "false",
 }
 BROWSER_OPTIONS: list[tuple[str, str]] = [
     ("Auto (try all)", "auto"),

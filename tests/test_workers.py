@@ -222,11 +222,8 @@ class TestRetryContract:
 
         monkeypatch.setattr(worker, "_run_spotdl", fake_run_spotdl)
 
-        async def fake_validate(_cmd):
-            return True
-
-        async def fake_deno(_cmd):
-            return True
+        async def fake_validate_and_deno(_cmd):
+            return True, True
 
         def _drive(coro):
             # Drive a no-await coroutine to completion and return its value.
@@ -236,8 +233,9 @@ class TestRetryContract:
                 return exc.value
             raise AssertionError("coroutine suspended unexpectedly")
 
-        monkeypatch.setattr("src.gui.workers.validate_spotdl", fake_validate)
-        monkeypatch.setattr("src.gui.workers.ensure_deno", fake_deno)
+        monkeypatch.setattr(
+            "src.gui.workers.validate_and_ensure_deno", fake_validate_and_deno
+        )
         monkeypatch.setattr("asyncio.run", _drive)
 
         urls = [

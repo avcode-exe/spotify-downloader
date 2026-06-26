@@ -22,10 +22,10 @@ jobs:
         run: pip install ruff pytest
 
       - name: Ruff check
-        run: ruff check spotify_downloader.py gui_app.py installer.py src/ tests/
+        run: ruff check scripts/ spotify_downloader.py gui_app.py installer.py src/ tests/
 
       - name: Ruff format check
-        run: ruff format --check spotify_downloader.py gui_app.py installer.py src/ tests/
+        run: ruff format --check scripts/ spotify_downloader.py gui_app.py installer.py src/ tests/
 
   test:
     name: Tests (Python ${{ matrix.python-version }})
@@ -66,8 +66,8 @@ jobs:
       - name: Install dependencies and mypy
         run: pip install -r requirements.txt mypy
 
-      - name: Run mypy
-        run: python -m mypy src/ --ignore-missing-imports
+      - name: Run mypy on all Python files
+        run: python -m mypy scripts/ src/ gui_app.py installer.py --ignore-missing-imports
 
   compile:
     name: Compile (Python ${{ matrix.python-version }})
@@ -89,7 +89,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Compile check
-        run: python -m compileall -q spotify_downloader.py gui_app.py installer.py src/
+        run: python -m compileall -q scripts/ spotify_downloader.py gui_app.py installer.py src/
 
   validate:
     name: Validate on ${{ matrix.os }}

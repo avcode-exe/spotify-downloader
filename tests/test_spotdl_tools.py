@@ -71,11 +71,19 @@ class TestBuildSpotdlArgs:
             "mp3",
             "--audio",
             "youtube-music",
-            "--use-cache-file",
             "--output",
             "/downloads",
             "https://open.spotify.com/playlist/123",
         ]
+
+    def test_use_cache_file_enabled_when_set(self) -> None:
+        cmd = build_spotdl_args(
+            ["spotdl"],
+            ["url"],
+            "/out",
+            {"use_cache_file": "true"},
+        )
+        assert "--use-cache-file" in cmd
 
     def test_all_options(self, tmp_path: Path) -> None:
         cookie_file = tmp_path / "cookies.txt"
@@ -159,7 +167,6 @@ class TestBuildSpotdlArgs:
             "mp3",
             "--audio",
             "youtube-music",
-            "--use-cache-file",
             "--output",
             "/out",
             "--overwrite",

@@ -43,6 +43,9 @@ class SettingsFrame(ctk.CTkFrame):
         self._settings = dict(settings)
         self._on_change = on_change
         self._loading = True
+        # Maps StringVar names to their internal-value lookup dicts so that
+        # _on_setting_changed can convert display text back to internal values.
+        self._value_maps: dict[str, dict[str, str]] = {}
         self._build_ui()
         self._loading = False
 
@@ -176,24 +179,32 @@ class SettingsFrame(ctk.CTkFrame):
         resolved_value = value_to_display.get(current_value, current_value)
         variable.set(resolved_value)
 
+        # Register the display→internal value map keyed by the setting name
+        # (e.g. "format", "audio_provider") so _on_setting_changed can
+        # resolve the correct internal value.
+        var_name = variable._name.lstrip("!").removesuffix("_var")
+        self._value_maps[var_name] = display_to_value
+
+        # Build a per-variable callback that resolves the selected display text
+        # back to the internal value and triggers a settings save.
+        def _make_callback(vm: dict[str, str], var: ctk.StringVar) -> Callable[[str], None]:
+            def _callback(selected: str) -> None:
+                internal = vm.get(selected, selected)
+                var.set(internal)
+                self._on_setting_changed(internal)
+            return _callback
+
         option = ctk.CTkOptionMenu(
             row,
             variable=variable,
             values=display_options,
-            command=lambda _value, vm=display_to_value: self._on_browser_changed(
-                vm, _value
-            ),
+            command=_make_callback(display_to_value, variable),
             height=36,
             corner_radius=6,
             font=FONT_BUTTON,
             dropdown_font=FONT_BUTTON,
         )
         option.pack(side="left", fill="x", expand=True)
-
-    def _on_browser_changed(self, value_map: dict[str, str], selected: str) -> None:
-        actual_value = value_map.get(selected, selected)
-        self._browser_var.set(actual_value)
-        self._on_setting_changed(actual_value)
 
     def _add_entry_row(
         self, parent: ctk.CTkFrame, label: str, variable: ctk.StringVar
@@ -233,17 +244,27 @@ class SettingsFrame(ctk.CTkFrame):
     def _on_setting_changed(self, _value: str | None = None) -> None:
         if self._loading:
             return
-        self._settings.update(
-            {
-                "format": self._format_var.get(),
-                "bitrate": self._bitrate_var.get(),
-                "audio_provider": self._provider_var.get(),
-                "duplicate_policy": self._policy_var.get(),
-                "browser": self._browser_var.get(),
-                "proxy": self._proxy_var.get().strip(),
-                "cookie_file": self._cookie_file_var.get().strip(),
-            }
-        )
+        # Resolve display labels back to internal values using registered maps.
+        settings: dict[str, str] = {}
+        for var_name in (
+            "_format_var",
+            "_bitrate_var",
+            "_provider_var",
+            "_policy_var",
+            "_proxy_var",
+            "_cookie_file_var",
+            "_browser_var",
+        ):
+            var = getattr(self, var_name)
+            display_val = var.get()
+            # Strip leading underscore and trailing "_var" suffix to get the
+            # setting key (e.g. "_provider_var" → "provider", "_proxy_var" → "proxy").
+            setting_key = var_name.lstrip("_").removesuffix("_var")
+            vmap = self._value_maps.get(setting_key, {})
+            settings[setting_key] = vmap.get(display_val, display_val)
+        settings["proxy"] = settings["proxy"].strip()
+        settings["cookie_file"] = settings["cookie_file"].strip()
+        self._settings.update(settings)
         self._status_var.set(self._status_text())
         if self._on_change:
             self._on_change(self._settings)

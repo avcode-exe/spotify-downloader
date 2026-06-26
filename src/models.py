@@ -62,7 +62,12 @@ def redact_proxy(proxy: str) -> str:
 
 
 def redact_settings_for_log(settings: dict[str, str]) -> dict[str, str]:
-    """Return a copy of ``settings`` safe to log (proxy credentials masked)."""
+    """Return a copy of ``settings`` safe to log (proxy credentials masked).
+
+    Note: proxy credentials are redacted in logs but are still stored in
+    plaintext in the on-disk settings file. Users on shared machines should
+    be aware that ``~/.spotdl/settings.json`` may contain proxy passwords.
+    """
     redacted = dict(settings)
     if "proxy" in redacted:
         redacted["proxy"] = redact_proxy(redacted.get("proxy", ""))

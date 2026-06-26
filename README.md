@@ -21,7 +21,7 @@ YouTube Music (via [spotDL](https://github.com/spotDL/spotify-downloader)).
 - **Rate-Limit Detection** — Warns when YouTube is blocking downloads and suggests setting a cookie file
 - **Cancellation** — Cancel any in-progress download at any time (now kills the entire spotDL process tree)
 - **Cross-Platform** — Works on Windows, macOS, and Linux
-- **198 unit tests** — Full coverage of URL validation, proxy handling, state persistence, duplicate logic, and UI utilities
+- **208 unit tests** — Full coverage of URL validation, proxy handling, state persistence, duplicate logic, and UI utilities
 - **Improved error handling** — Folder creation catches `OSError` instead of just `PermissionError`
 - **Safer metadata cache eviction** — Uses `pop(key, None)` to avoid race conditions during cache cleanup
 
@@ -259,20 +259,6 @@ To clean build artifacts without building:
 
 ---
 
-## GitHub Actions (Auto-Build)
-
-The repo includes `.github/workflows/build-exe.yml`. On every push/PR:
-- Builds the GUI EXE on `windows-latest`
-- Matrix: Python 3.11 and 3.12
-- Uploads `dist/SpotifyDownloader/` as a workflow artifact (retained 30 days)
-
-To download the artifact:
-1. Go to the **Actions** tab in GitHub
-2. Select the latest **Build Windows EXE** run
-3. Download the `SpotifyDownloader-win-<version>` artifact
-
----
-
 ## Usage
 
 ### TUI (Terminal UI)
@@ -357,52 +343,6 @@ The GUI **Settings** panel provides the same options in a desktop-friendly layou
 
 All settings are saved to `~/.spotdl/settings.json` and restored on restart.
 
-## Building the Windows EXE
-
-### Prerequisites
-
-- Windows OS
-- Python 3.10+
-- Inno Setup 6+ (bundled at `C:\Program\ISCC.exe` for local builds)
-
-### Build Steps
-
-```powershell
-# 1. Install build dependencies
-pip install pyinstaller
-
-# 2. Run the build script (PowerShell)
-.\build.ps1
-
-# Outputs:
-#   dist\SpotifyDownloader\SpotifyDownloader.exe   (portable)
-#   installer\SpotifyDownloader_Setup.exe          (official installer)
-```
-
-To skip the installer and only build the portable EXE:
-```powershell
-.\build.ps1 -SkipInstaller
-```
-
-### Installer Features
-
-`installer.iss` creates a modern `Setup.exe` with:
-- Start Menu shortcut
-- Optional Desktop shortcut
-- Installs `gui_app.py`, `spotify_downloader.py`, `src/`, and `requirements.txt` under `%LOCALAPPDATA%\Spotify Downloader\`
-
-### GitHub Actions (Auto-Build)
-
-The repo includes `.github/workflows/build-exe.yml`. On every push/PR:
-- Builds the GUI EXE on `windows-latest`
-- Matrix: Python 3.11 and 3.12
-- Uploads `dist/SpotifyDownloader/` as a workflow artifact (retained 30 days)
-
-To download the artifact:
-1. Go to the **Actions** tab in GitHub
-2. Select the latest **Build Windows EXE** run
-3. Download the `SpotifyDownloader-win-<version>` artifact
-
 ## Troubleshooting
 
 ### Common Issues
@@ -466,6 +406,9 @@ spotify_downloader/
 ├── build.bat              # Batch build script for Windows EXE
 ├── installer.iss          # Inno Setup script for classic Setup.exe
 ├── generate_icon.py       # Helper script to create a default icon
+├── scripts/
+│   ├── __init__.py        # Build-time helper package
+│   └── write_version_include.py  # Generates installer/_version.iss from src.__version__
 ├── assets/
 │   └── icon.ico           # Default application icon
 ├── gui_app.py             # Modern GUI entry point (CustomTkinter)
@@ -503,6 +446,26 @@ The app stores data in `~/.spotdl/`:
 | `track_state.json` | Per-track state for retry and duplicate handling |
 | `cookies.txt` | Auto-extracted browser cookies for YouTube authentication |
 | `app.log` | Application log file (rotated, 5MB max) |
+
+## Version Management
+
+The application version is defined in a single place: `src/__version__`. The build process (`build.ps1` / `build.bat`) automatically generates `installer/_version.iss` from this value before compiling the Inno Setup installer. The generated file is excluded from version control (`.gitignore`).
+
+To change the version, edit only `src/__init__.py` and run the build script — the installer will pick up the new version automatically.
+
+## Continuous Integration
+
+The project includes a CI workflow (`.github/workflows/ci.yml`) that runs on every push and pull request across **Ubuntu**, **macOS**, and **Windows** with **Python 3.11**, **3.12**, and **3.13**. The pipeline executes:
+
+| Job | What it does |
+|-----|-------------|
+| `lint` | Ruff check + format check on all Python files |
+| `test` | Full pytest suite (208 tests) |
+| `typecheck` | mypy static type checking |
+| `compile` | `compileall` verification of all `.py` files |
+| `validate` | Import smoke tests for TUI, GUI, and installer modules |
+
+## Reducing Rate Limiting
 
 YouTube may block downloads from your IP if you hit it too hard. Here's how to reduce failures:
 

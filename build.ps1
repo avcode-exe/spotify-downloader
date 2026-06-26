@@ -14,7 +14,8 @@ function Invoke-Clean {
         "SpotifyDownloader.spec",
         "SpotifyDownloader_Installer.exe",
         "installer\SpotifyDownloader_Setup.exe",
-        "installer\SpotifyDownloader_Setup_files"
+        "installer\SpotifyDownloader_Setup_files",
+        "installer\_version.iss"
     )
     foreach ($p in $paths) {
         if (Test-Path $p) {
@@ -104,6 +105,14 @@ Write-Host "========================================" -ForegroundColor Green
 if (-not $SkipInstaller) {
     Write-Host ""
     Write-Host "[5/5] Building installer with Inno Setup..." -ForegroundColor Yellow
+
+    Write-Host "  Regenerating installer\_version.iss from src\__version__..." -ForegroundColor Gray
+    python -m scripts.write_version_include
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "ERROR: Failed to generate installer\_version.iss." -ForegroundColor Red
+        exit 1
+    }
+
     $iscc = $null
     $candidates = @(
         "C:\Program\ISCC.exe",

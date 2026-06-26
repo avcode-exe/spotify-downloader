@@ -62,14 +62,11 @@ async def validate_spotdl(spotdl_cmd: list[str]) -> bool:
         return False
 
 
-async def ensure_deno(spotdl_cmd: list[str]) -> bool:
+async def _ensure_deno_inner(spotdl_cmd: list[str]) -> bool:
     """Best-effort installation of Deno (used for some age-restricted videos).
 
     Returns ``True`` when Deno is already available or is installed
-    successfully, and ``False`` only when an install attempt fails. Deno is
-    **optional** for spotDL, so callers should treat ``False`` as a warning,
-    not a hard failure (see README). Previously this returned ``True`` on every
-    path, which made the failure branch unreachable and swallowed real errors.
+    successfully, and ``False`` only when an install attempt fails.
     """
     if shutil.which("deno") or shutil.which("deno.exe"):
         return True
@@ -97,6 +94,22 @@ async def ensure_deno(spotdl_cmd: list[str]) -> bool:
             "Deno install skipped | error=%s", exc
         )
         return False
+
+
+async def validate_and_ensure_deno(spotdl_cmd: list[str]) -> tuple[bool, bool]:
+    """Validate spotDL and ensure Deno, returning (spotdl_ok, deno_ok).
+
+    Runs both checks in a single event loop to avoid the overhead of
+    creating/closing separate loops per call.
+    """
+    spotdl_ok = await validate_spotdl(spotdl_cmd)
+    deno_ok = await _ensure_deno_inner(spotdl_cmd)
+    return spotdl_ok, deno_ok
+
+
+# Backward-compatible alias: tests and other callers that import ensure_deno
+# individually still work.
+ensure_deno = _ensure_deno_inner
 
 
 def build_spotdl_args(
@@ -128,7 +141,7 @@ def build_spotdl_args(
         cmd.extend(["--proxy", proxy])
     if cookie_file and os.path.isfile(cookie_file):
         cmd.extend(["--cookie-file", cookie_file])
-    if settings.get("use_cache_file", "true").lower() != "false":
+    if settings.get("use_cache_file", "false").lower() != "false":
         cmd.append("--use-cache-file")
     cmd.extend(["--output", output_folder])
     if overwrite:

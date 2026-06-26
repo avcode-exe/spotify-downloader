@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import threading
 import unicodedata
 from pathlib import Path
 from typing import Any, cast
@@ -8,6 +9,7 @@ from typing import Any, cast
 from .models import AUDIO_EXTENSIONS, DuplicateGroup, LocalTrack
 
 _METADATA_CACHE: dict[Path, tuple[float, int, dict[str, Any]]] = {}
+_METADATA_CACHE_LOCK = threading.Lock()
 _METADATA_CACHE_MAXSIZE = 2048
 
 SAFE_MOVE_REASONS = {"same normalized filename"}
@@ -62,12 +64,13 @@ def _read_audio_metadata(path: Path) -> dict[str, object]:
         metadata["albumartist"] = _first_audio_value(audio, "albumartist")
         metadata["genre"] = _first_audio_value(audio, "genre")
         metadata["date"] = _first_audio_value(audio, "date")
-    _METADATA_CACHE[path] = (mtime, size, metadata)
-    if len(_METADATA_CACHE) > _METADATA_CACHE_MAXSIZE:
-        excess = len(_METADATA_CACHE) - _METADATA_CACHE_MAXSIZE + 64
-        keys_to_remove = list(_METADATA_CACHE.keys())[:excess]
-        for key in keys_to_remove:
-            _METADATA_CACHE.pop(key, None)
+    with _METADATA_CACHE_LOCK:
+        _METADATA_CACHE[path] = (mtime, size, metadata)
+        if len(_METADATA_CACHE) > _METADATA_CACHE_MAXSIZE:
+            excess = len(_METADATA_CACHE) - _METADATA_CACHE_MAXSIZE + 64
+            keys_to_remove = list(_METADATA_CACHE.keys())[:excess]
+            for key in keys_to_remove:
+                _METADATA_CACHE.pop(key, None)
     return metadata
 
 
