@@ -20,11 +20,9 @@ from src.spotdl_tools import (
     FOUND_RE,
     SKIPPED_RE,
     build_spotdl_args,
-    ensure_deno,
     find_spotdl,
     is_rate_limit_error,
     validate_and_ensure_deno,
-    validate_spotdl,
 )
 from src.state import (
     load_track_state,
