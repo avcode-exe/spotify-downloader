@@ -5,12 +5,15 @@ import customtkinter as ctk
 from src.models import DuplicateGroup
 
 from .theme import (
-    FONT_LABEL,
     FONT_SECTION,
+    FONT_SMALL,
     SPOTIFY_BORDER_COLOR,
     SPOTIFY_DARK_GRAY,
+    SPOTIFY_LIGHT_GRAY,
     SPOTIFY_WHITE,
     frame_kwargs,
+    GAP_CARD_INNER,
+    GAP_ROW,
 )
 
 
@@ -21,22 +24,22 @@ class DuplicatesFrame(ctk.CTkFrame):
 
     def _build_ui(self) -> None:
         inner = ctk.CTkFrame(self, fg_color="transparent")
-        inner.pack(fill="both", expand=True, padx=16, pady=16)
+        inner.pack(fill="both", expand=True, padx=GAP_CARD_INNER, pady=GAP_CARD_INNER)
 
         header = ctk.CTkLabel(
             inner,
-            text="📋 Duplicates",
+            text="Duplicates",
             font=FONT_SECTION,
             text_color=SPOTIFY_WHITE,
         )
-        header.pack(anchor="w", pady=(0, 12))
+        header.pack(anchor="w", pady=(0, GAP_ROW))
 
         self._text = ctk.CTkTextbox(
             inner,
             state="disabled",
             wrap="word",
-            font=FONT_LABEL,
-            text_color=SPOTIFY_WHITE,
+            font=FONT_SMALL,
+            text_color=SPOTIFY_LIGHT_GRAY,
             fg_color=SPOTIFY_DARK_GRAY,
             border_width=1,
             border_color=SPOTIFY_BORDER_COLOR,
@@ -48,19 +51,23 @@ class DuplicatesFrame(ctk.CTkFrame):
         self._text.configure(state="normal")
         self._text.delete("1.0", "end")
 
+        lines: list[str] = []
+
         if not duplicate_groups:
-            self._text.insert("end", "No duplicate groups found. Run Preview first.\n")
+            lines.append("No duplicate groups found. Run Preview first.")
         else:
             for group in duplicate_groups:
                 keep = group.keep
                 keep_name = keep.path.name if keep else "unknown"
                 action = "move" if group.safe_to_move else "review"
-                self._text.insert("end", f"{group.reason} {group.key}\n")
-                self._text.insert("end", f"  keep: {keep_name}\n")
+                lines.append("")
+                lines.append("  {}: {}".format(group.reason, group.key))
+                lines.append("    keep: {}".format(keep_name))
                 for track in group.tracks:
                     if track is keep:
                         continue
-                    self._text.insert("end", f"  {action}: {track.path.name}\n")
-                self._text.insert("end", "\n")
+                    lines.append("    {}: {}".format(action, track.path.name))
+                lines.append("")
 
+        self._text.insert("end", "\n".join(lines) + "\n")
         self._text.configure(state="disabled")

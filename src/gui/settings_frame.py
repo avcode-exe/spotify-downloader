@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from typing import Callable, Sequence
 
 import customtkinter as ctk
@@ -10,14 +9,21 @@ from src.state import STATE_FILE
 
 from .theme import (
     FONT_BUTTON,
+    FONT_CAPTION,
     FONT_LABEL,
     FONT_SECTION,
     SPOTIFY_BORDER_COLOR,
     SPOTIFY_DARK_GRAY,
+    SPOTIFY_DISABLED_TEXT,
     SPOTIFY_GREEN,
     SPOTIFY_LIGHT_GRAY,
+    SPOTIFY_MID_GRAY,
+    SPOTIFY_TEXT_MUTED,
     SPOTIFY_WHITE,
     frame_kwargs,
+    GAP_ACTION,
+    GAP_CARD_INNER,
+    GAP_ROW,
 )
 
 BROWSER_OPTIONS: list[tuple[str, str]] = [
@@ -43,23 +49,22 @@ class SettingsFrame(ctk.CTkFrame):
         self._settings = dict(settings)
         self._on_change = on_change
         self._loading = True
-        # Maps StringVar names to their internal-value lookup dicts so that
-        # _on_setting_changed can convert display text back to internal values.
         self._value_maps: dict[str, dict[str, str]] = {}
         self._build_ui()
         self._loading = False
 
     def _build_ui(self) -> None:
         inner = ctk.CTkFrame(self, fg_color="transparent")
-        inner.pack(fill="both", expand=True, padx=16, pady=16)
+        inner.pack(fill="both", expand=True, padx=GAP_CARD_INNER, pady=GAP_CARD_INNER)
 
+        # Title with accent
         title = ctk.CTkLabel(
             inner,
-            text="⚙ Settings",
+            text="Settings",
             font=FONT_SECTION,
             text_color=SPOTIFY_GREEN,
         )
-        title.pack(anchor="w", pady=(0, 16))
+        title.pack(anchor="w", pady=(0, GAP_ACTION))
 
         self._format_var = ctk.StringVar(value=self._settings.get("format", "mp3"))
         self._bitrate_var = ctk.StringVar(value=self._settings.get("bitrate", "auto"))
@@ -108,40 +113,49 @@ class SettingsFrame(ctk.CTkFrame):
         self._add_entry_row(inner, "Proxy", self._proxy_var)
         self._add_entry_row(inner, "Cookie file", self._cookie_file_var)
 
+        # Browse button for cookie file
         params = {
             "fg_color": "transparent",
-            "hover_color": SPOTIFY_DARK_GRAY,
+            "hover_color": SPOTIFY_MID_GRAY,
             "text_color": SPOTIFY_WHITE,
             "border_color": SPOTIFY_BORDER_COLOR,
             "border_width": 1,
             "font": FONT_BUTTON,
             "height": 36,
+            "corner_radius": 6,
         }
         browse_btn = ctk.CTkButton(
-            inner, text="Browse", command=self._browse_cookie_file, **params
+            inner, text="Browse\u2026", command=self._browse_cookie_file, **params
         )
-        browse_btn.pack(fill="x", pady=(0, 12))
+        browse_btn.pack(fill="x", pady=(0, GAP_ACTION))
 
+        # Divider
+        divider = ctk.CTkFrame(inner, fg_color=SPOTIFY_BORDER_COLOR, height=1)
+        divider.pack(fill="x", pady=(GAP_ACTION, GAP_ACTION))
+        divider.pack()
+
+        # Active settings summary
         status = self._status_text()
         self._status_var = ctk.StringVar(value=status)
         status_label = ctk.CTkLabel(
             inner,
             textvariable=self._status_var,
             font=FONT_LABEL,
-            text_color=SPOTIFY_LIGHT_GRAY,
-            wraplength=380,
+            text_color=SPOTIFY_TEXT_MUTED,
+            wraplength=400,
             anchor="w",
             justify="left",
         )
-        status_label.pack(fill="x", pady=(16, 10))
+        status_label.pack(fill="x", pady=(GAP_ACTION, GAP_ACTION))
 
+        # State file info
         state_label = ctk.CTkLabel(
             inner,
             text=f"State: {STATE_FILE}",
-            font=("Segoe UI", 10),
-            text_color="#777777",
+            font=FONT_CAPTION,
+            text_color=SPOTIFY_DISABLED_TEXT,
             anchor="w",
-            wraplength=380,
+            wraplength=400,
             justify="left",
         )
         state_label.pack(fill="x", pady=(0, 0))
@@ -163,13 +177,13 @@ class SettingsFrame(ctk.CTkFrame):
             display_to_value = {str(opt): str(opt) for opt in options}
 
         row = ctk.CTkFrame(parent, fg_color="transparent")
-        row.pack(fill="x", pady=(0, 10))
+        row.pack(fill="x", pady=(0, GAP_ROW))
 
         label_widget = ctk.CTkLabel(
             row,
             text=label,
             font=FONT_LABEL,
-            text_color=SPOTIFY_WHITE,
+            text_color=SPOTIFY_LIGHT_GRAY,
             width=90,
             anchor="w",
         )
@@ -179,19 +193,17 @@ class SettingsFrame(ctk.CTkFrame):
         resolved_value = value_to_display.get(current_value, current_value)
         variable.set(resolved_value)
 
-        # Register the display→internal value map keyed by the setting name
-        # (e.g. "format", "audio_provider") so _on_setting_changed can
-        # resolve the correct internal value.
         var_name = variable._name.lstrip("!").removesuffix("_var")
         self._value_maps[var_name] = display_to_value
 
-        # Build a per-variable callback that resolves the selected display text
-        # back to the internal value and triggers a settings save.
-        def _make_callback(vm: dict[str, str], var: ctk.StringVar) -> Callable[[str], None]:
+        def _make_callback(
+            vm: dict[str, str], var: ctk.StringVar
+        ) -> Callable[[str], None]:
             def _callback(selected: str) -> None:
                 internal = vm.get(selected, selected)
                 var.set(internal)
                 self._on_setting_changed(internal)
+
             return _callback
 
         option = ctk.CTkOptionMenu(
@@ -203,6 +215,13 @@ class SettingsFrame(ctk.CTkFrame):
             corner_radius=6,
             font=FONT_BUTTON,
             dropdown_font=FONT_BUTTON,
+            fg_color=SPOTIFY_MID_GRAY,
+            button_color=SPOTIFY_DARK_GRAY,
+            button_hover_color=SPOTIFY_BORDER_COLOR,
+            text_color=SPOTIFY_WHITE,
+            dropdown_fg_color=SPOTIFY_DARK_GRAY,
+            dropdown_hover_color=SPOTIFY_MID_GRAY,
+            dropdown_text_color=SPOTIFY_WHITE,
         )
         option.pack(side="left", fill="x", expand=True)
 
@@ -210,13 +229,13 @@ class SettingsFrame(ctk.CTkFrame):
         self, parent: ctk.CTkFrame, label: str, variable: ctk.StringVar
     ) -> None:
         row = ctk.CTkFrame(parent, fg_color="transparent")
-        row.pack(fill="x", pady=(0, 10))
+        row.pack(fill="x", pady=(0, GAP_ROW))
 
         label_widget = ctk.CTkLabel(
             row,
             text=label,
             font=FONT_LABEL,
-            text_color=SPOTIFY_WHITE,
+            text_color=SPOTIFY_LIGHT_GRAY,
             width=90,
             anchor="w",
         )
@@ -228,6 +247,11 @@ class SettingsFrame(ctk.CTkFrame):
             height=36,
             corner_radius=6,
             font=FONT_BUTTON,
+            fg_color=SPOTIFY_MID_GRAY,
+            border_color=SPOTIFY_BORDER_COLOR,
+            border_width=1,
+            text_color=SPOTIFY_WHITE,
+            placeholder_text_color=SPOTIFY_TEXT_MUTED,
         )
         entry.pack(side="left", fill="x", expand=True)
         entry.bind("<Return>", lambda _event: self._on_setting_changed(variable.get()))
@@ -244,7 +268,6 @@ class SettingsFrame(ctk.CTkFrame):
     def _on_setting_changed(self, _value: str | None = None) -> None:
         if self._loading:
             return
-        # Resolve display labels back to internal values using registered maps.
         settings: dict[str, str] = {}
         for var_name in (
             "_format_var",
@@ -257,8 +280,6 @@ class SettingsFrame(ctk.CTkFrame):
         ):
             var = getattr(self, var_name)
             display_val = var.get()
-            # Strip leading underscore and trailing "_var" suffix to get the
-            # setting key (e.g. "_provider_var" → "provider", "_proxy_var" → "proxy").
             setting_key = var_name.lstrip("_").removesuffix("_var")
             vmap = self._value_maps.get(setting_key, {})
             settings[setting_key] = vmap.get(display_val, display_val)
@@ -278,17 +299,16 @@ class SettingsFrame(ctk.CTkFrame):
         if duplicate_policy not in _DUPLICATE_POLICY_MAP:
             duplicate_policy = "skip"
         parts = [
-            f"Format: {settings.get('format', 'mp3').upper()}",
-            f"Bitrate: {settings.get('bitrate', 'auto')}",
-            f"Source: {source}",
-            f"Duplicate: {_DUPLICATE_POLICY_MAP[duplicate_policy]}",
-            f"Browser: {settings.get('browser', 'auto').title()}",
+            f"{settings.get('format', 'mp3').upper()}",
+            f"{settings.get('bitrate', 'auto')}",
+            source,
+            _DUPLICATE_POLICY_MAP[duplicate_policy],
         ]
         if settings.get("proxy"):
-            parts.append(f"Proxy: {settings['proxy']}")
+            parts.append("Proxy set")
         if settings.get("cookie_file"):
-            parts.append(f"Cookies: {os.path.basename(settings['cookie_file'])}")
-        return " · ".join(parts)
+            parts.append("Cookies set")
+        return "  \u2022  ".join(parts)
 
     def get_settings(self) -> dict[str, str]:
         self._on_setting_changed()

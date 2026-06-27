@@ -6,8 +6,11 @@ from .theme import (
     FONT_SECTION,
     SPOTIFY_BORDER_COLOR,
     SPOTIFY_DARK_GRAY,
+    SPOTIFY_LIGHT_GRAY,
     SPOTIFY_WHITE,
     frame_kwargs,
+    GAP_CARD_INNER,
+    GAP_ROW,
 )
 
 
@@ -18,22 +21,22 @@ class LogFrame(ctk.CTkFrame):
 
     def _build_ui(self) -> None:
         inner = ctk.CTkFrame(self, fg_color="transparent")
-        inner.pack(fill="both", expand=True, padx=16, pady=16)
+        inner.pack(fill="both", expand=True, padx=GAP_CARD_INNER, pady=GAP_CARD_INNER)
 
         header = ctk.CTkLabel(
             inner,
-            text="📜 Log",
+            text="Log",
             font=FONT_SECTION,
             text_color=SPOTIFY_WHITE,
         )
-        header.pack(anchor="w", pady=(0, 12))
+        header.pack(anchor="w", pady=(0, GAP_ROW))
 
         self._text = ctk.CTkTextbox(
             inner,
             state="disabled",
             wrap="word",
-            font=("Consolas", 10),
-            text_color=SPOTIFY_WHITE,
+            font=("Cascadia Code", 10),
+            text_color=SPOTIFY_LIGHT_GRAY,
             fg_color=SPOTIFY_DARK_GRAY,
             border_width=1,
             border_color=SPOTIFY_BORDER_COLOR,

@@ -21,7 +21,7 @@ from src.state import (
     summarize_track_state,
 )
 
-from .theme import apply_theme, SPOTIFY_BLACK
+from .theme import apply_theme, SPOTIFY_BLACK, SPOTIFY_GREEN
 from .duplicates_frame import DuplicatesFrame
 from .history_frame import HistoryFrame
 from .home_frame import HomeFrame
@@ -37,8 +37,8 @@ class SpotifyDownloaderGUI(ctk.CTk):
         apply_theme()
         super().__init__()
         self.title("Spotify Playlist Downloader")
-        self.geometry("1200x800")
-        self.minsize(1024, 768)
+        self.geometry("1280x860")
+        self.minsize(1024, 720)
         self.protocol("WM_DELETE_WINDOW", self._on_close)
 
         default_bg = SPOTIFY_BLACK
@@ -53,8 +53,6 @@ class SpotifyDownloaderGUI(ctk.CTk):
         self._worker: SpotDLWorker | None = None
         self._confirm_clean_until = 0.0
         self._download_start_time = 0.0
-        # Failed-track URLs are owned by the controller (not the worker) so that
-        # Retry survives a worker being replaced for a new download.
 
         self._build_ui()
         self._apply_settings_to_ui()
@@ -66,14 +64,15 @@ class SpotifyDownloaderGUI(ctk.CTk):
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
 
+        # Main scrollable container
         self._scroll_frame = ctk.CTkScrollableFrame(
             self,
-            scrollbar_button_hover_color="#1DB954",
-            scrollbar_button_color="#1DB954",
-            corner_radius=8,
+            scrollbar_button_hover_color=SPOTIFY_GREEN,
+            scrollbar_button_color=SPOTIFY_GREEN,
+            corner_radius=0,
             fg_color=SPOTIFY_BLACK,
         )
-        self._scroll_frame.grid(row=0, column=0, sticky="nsew", padx=16, pady=16)
+        self._scroll_frame.grid(row=0, column=0, sticky="nsew", padx=24, pady=24)
         self._scroll_frame.columnconfigure(0, weight=1)
         self._scroll_frame.columnconfigure(1, weight=1)
         self._scroll_frame.rowconfigure(0, weight=0)
@@ -81,6 +80,7 @@ class SpotifyDownloaderGUI(ctk.CTk):
         self._scroll_frame.rowconfigure(2, weight=1)
         self._scroll_frame.rowconfigure(3, weight=0)
 
+        # Row 0: Home (left) + Settings (right)
         self._home_frame = HomeFrame(
             self._scroll_frame,
             on_download=self._on_download,
@@ -90,33 +90,38 @@ class SpotifyDownloaderGUI(ctk.CTk):
             on_retry=self._on_retry,
             on_cancel=self._on_cancel,
         )
-        self._home_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 8), pady=(0, 12))
+        self._home_frame.grid(
+            row=0, column=0, sticky="nsew", padx=(0, 12), pady=(0, 12)
+        )
 
         self._settings_frame = SettingsFrame(
             self._scroll_frame, self._settings, on_change=self._on_settings_changed
         )
         self._settings_frame.grid(
-            row=0, column=1, sticky="nsew", padx=(8, 0), pady=(0, 12)
+            row=0, column=1, sticky="nsew", padx=(12, 0), pady=(0, 12)
         )
 
+        # Row 1: Preview (left) + Duplicates (right) - initially hidden
         self._preview_frame = PreviewFrame(self._scroll_frame)
         self._preview_frame.grid(
-            row=1, column=0, sticky="nsew", padx=(0, 8), pady=(0, 12)
+            row=1, column=0, sticky="nsew", padx=(0, 12), pady=(0, 12)
         )
 
         self._duplicates_frame = DuplicatesFrame(self._scroll_frame)
         self._duplicates_frame.grid(
-            row=1, column=1, sticky="nsew", padx=(8, 0), pady=(0, 12)
+            row=1, column=1, sticky="nsew", padx=(12, 0), pady=(0, 12)
         )
 
+        # Row 2: History (full width)
         self._history_frame = HistoryFrame(self._scroll_frame)
         self._history_frame.grid(
             row=2, column=0, columnspan=2, sticky="nsew", padx=0, pady=(0, 12)
         )
 
+        # Row 3: Log (full width)
         self._log_frame = LogFrame(self._scroll_frame)
         self._log_frame.grid(
-            row=3, column=0, columnspan=2, sticky="nsew", padx=0, pady=(0, 12)
+            row=3, column=0, columnspan=2, sticky="nsew", padx=0, pady=(0, 0)
         )
 
         self._preview_visible = False
@@ -128,19 +133,19 @@ class SpotifyDownloaderGUI(ctk.CTk):
         self._preview_visible = not self._preview_visible
         if self._preview_visible:
             self._preview_frame.grid()
-            self._home_frame.preview_btn.configure(text="🔎  Hide Preview")
+            self._home_frame.preview_btn.configure(text="Hide Preview")
         else:
             self._preview_frame.grid_remove()
-            self._home_frame.preview_btn.configure(text="🔎  Preview")
+            self._home_frame.preview_btn.configure(text="Preview")
 
     def _toggle_duplicates(self) -> None:
         self._duplicates_visible = not self._duplicates_visible
         if self._duplicates_visible:
             self._duplicates_frame.grid()
-            self._home_frame.duplicates_btn.configure(text="📋  Hide Duplicates")
+            self._home_frame.duplicates_btn.configure(text="Hide Duplicates")
         else:
             self._duplicates_frame.grid_remove()
-            self._home_frame.duplicates_btn.configure(text="📋  Duplicates")
+            self._home_frame.duplicates_btn.configure(text="Duplicates")
 
     def _load_settings(self) -> dict[str, str]:
         defaults = {
@@ -229,17 +234,17 @@ class SpotifyDownloaderGUI(ctk.CTk):
         self._toggle_preview()
         if self._preview_visible:
             self._refresh_preview()
-            self._log_frame.write("🔎 Preview refreshed")
+            self._log_frame.write("Preview refreshed")
         else:
-            self._log_frame.write("🔎 Preview hidden")
+            self._log_frame.write("Preview hidden")
 
     def _on_duplicates(self) -> None:
         self._toggle_duplicates()
         if self._duplicates_visible:
             self._refresh_preview()
-            self._log_frame.write("📋 Duplicates list refreshed")
+            self._log_frame.write("Duplicates list refreshed")
         else:
-            self._log_frame.write("📋 Duplicates hidden")
+            self._log_frame.write("Duplicates hidden")
 
     def _on_download(self) -> None:
         url = self._home_frame.url_entry.get().strip()
@@ -270,7 +275,6 @@ class SpotifyDownloaderGUI(ctk.CTk):
         self._start_worker(url, output_folder, fresh=True)
 
     def _start_worker(self, url: str, output_folder: str, fresh: bool) -> None:
-        # A fresh download starts a new retry set; drop any previously failed URLs.
         self._failed_tracks.clear()
         self._worker = SpotDLWorker(
             self._settings, output_folder, self._on_worker_event, tk_root=self
@@ -308,13 +312,10 @@ class SpotifyDownloaderGUI(ctk.CTk):
         elif result.kind == "status":
             self._home_frame.update_status(
                 result.data["status"],
-                result.data.get("track", "—"),
+                result.data.get("track", "\u2014"),
                 result.data.get("progress", 0.0),
             )
         elif result.kind == "progress":
-            # CTkProgressBar.set() interprets its argument as a 0..1 fraction
-            # regardless of `maximum`, so we standardise on the fraction model
-            # driven by the "status" events and never mutate `maximum` here.
             total = result.data.get("total", 0)
             done = result.data.get("done", 0)
             if total > 0:
@@ -326,7 +327,6 @@ class SpotifyDownloaderGUI(ctk.CTk):
                 self._home_frame.progress.get(),
             )
         elif result.kind == "failed":
-            # Accumulate retryable URLs at the controller level.
             url = result.data.get("url")
             if url and url not in self._failed_tracks:
                 self._failed_tracks.append(url)
@@ -338,20 +338,17 @@ class SpotifyDownloaderGUI(ctk.CTk):
                 result.data["status"],
             )
         elif result.kind == "done":
-            # The worker persisted its track_state to disk; reload ours so the
-            # preview/history counts are fresh instead of stale.
             self._track_state = load_track_state()
             self._home_frame.set_busy(False)
             self._reflect_failed_state()
             self._refresh_preview()
             self._render_history()
         elif result.kind == "error":
-            self._log_frame.write(f"✗ {result.error}")
+            self._log_frame.write(f"\u2717 {result.error}")
             self._home_frame.set_busy(False)
             self._reflect_failed_state()
 
     def _reflect_failed_state(self) -> None:
-        """Enable the Retry button only when there are tracks to retry."""
         self._home_frame.retry_btn.configure(
             state="normal" if self._failed_tracks else "disabled"
         )
@@ -400,14 +397,14 @@ class SpotifyDownloaderGUI(ctk.CTk):
                         data = json.loads(resp.read().decode())
                     latest = data["info"]["version"]
                     if parse_version(latest) > parse_version(installed):
-                        updates.append(f"{display_name} {installed} → {latest}")
+                        updates.append(f"{display_name} {installed} \u2192 {latest}")
                 except Exception:
                     pass
             if updates:
                 pkgs = " ".join(pkg for _, pkg in self._CHECKED_PACKAGES)
                 msg = (
                     "Updates available:\n"
-                    + "\n".join(f"   • {u}" for u in updates)
+                    + "\n".join(f"   \u2022 {u}" for u in updates)
                     + f"\n   Run: pip install -U {pkgs}"
                 )
                 self.after(0, self._log_frame.write, msg)

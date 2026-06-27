@@ -1,15 +1,17 @@
 from __future__ import annotations
 
-
 import customtkinter as ctk
 
 from .theme import (
-    FONT_LABEL,
     FONT_SECTION,
+    FONT_SMALL,
     SPOTIFY_BORDER_COLOR,
     SPOTIFY_DARK_GRAY,
+    SPOTIFY_LIGHT_GRAY,
     SPOTIFY_WHITE,
     frame_kwargs,
+    GAP_CARD_INNER,
+    GAP_ROW,
 )
 
 
@@ -20,22 +22,22 @@ class HistoryFrame(ctk.CTkFrame):
 
     def _build_ui(self) -> None:
         inner = ctk.CTkFrame(self, fg_color="transparent")
-        inner.pack(fill="both", expand=True, padx=16, pady=16)
+        inner.pack(fill="both", expand=True, padx=GAP_CARD_INNER, pady=GAP_CARD_INNER)
 
         header = ctk.CTkLabel(
             inner,
-            text="📜 Download History",
+            text="Download History",
             font=FONT_SECTION,
             text_color=SPOTIFY_WHITE,
         )
-        header.pack(anchor="w", pady=(0, 12))
+        header.pack(anchor="w", pady=(0, GAP_ROW))
 
         self._text = ctk.CTkTextbox(
             inner,
             state="disabled",
             wrap="word",
-            font=FONT_LABEL,
-            text_color=SPOTIFY_WHITE,
+            font=FONT_SMALL,
+            text_color=SPOTIFY_LIGHT_GRAY,
             fg_color=SPOTIFY_DARK_GRAY,
             border_width=1,
             border_color=SPOTIFY_BORDER_COLOR,
@@ -47,8 +49,10 @@ class HistoryFrame(ctk.CTkFrame):
         self._text.configure(state="normal")
         self._text.delete("1.0", "end")
 
+        lines: list[str] = []
+
         if not history:
-            self._text.insert("end", "No downloads yet.\n")
+            lines.append("No downloads yet.")
         else:
             for entry in history:
                 ts = entry.get("timestamp", "")
@@ -63,25 +67,32 @@ class HistoryFrame(ctk.CTkFrame):
                 url = entry.get("url", "")
                 short_url = url.split("?")[0] if url else "(unknown)"
                 if len(short_url) > 60:
-                    short_url = short_url[:57] + "…"
+                    short_url = short_url[:57] + "\u2026"
 
                 tracks = entry.get("tracks_downloaded", 0)
                 status = entry.get("status", "unknown")
-                folder = entry.get("output_folder", "")
 
-                self._text.insert(
-                    "end", f"{time_str}  {status}  {tracks} track(s)  {short_url}\n"
+                # Status indicator color
+                status_tag = status.upper()
+                lines.append(
+                    "  {}  {}  {} track(s)".format(time_str, status_tag, tracks)
                 )
+                lines.append("    {}".format(short_url))
+                folder = entry.get("output_folder", "")
                 if folder:
-                    self._text.insert("end", f"  → {folder}\n")
-            self._text.insert("end", "\n")
+                    lines.append("      \u2192 {}".format(folder))
+                lines.append("")
 
-        self._text.insert(
-            "end",
-            "Track state:\n"
-            f"  downloaded: {track_state_summary.get('downloaded', 0)}\n"
-            f"  skipped: {track_state_summary.get('skipped', 0)}\n"
-            f"  failed: {track_state_summary.get('failed', 0)}\n"
-            f"  quarantined: {track_state_summary.get('quarantined', 0)}\n",
+        lines.append("")
+        lines.append("Track state:")
+        lines.append(
+            "  downloaded: {}".format(track_state_summary.get("downloaded", 0))
         )
+        lines.append("  skipped: {}".format(track_state_summary.get("skipped", 0)))
+        lines.append("  failed: {}".format(track_state_summary.get("failed", 0)))
+        lines.append(
+            "  quarantined: {}".format(track_state_summary.get("quarantined", 0))
+        )
+
+        self._text.insert("end", "\n".join(lines) + "\n")
         self._text.configure(state="disabled")

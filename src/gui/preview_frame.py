@@ -7,12 +7,16 @@ from src.models import DuplicateGroup, LocalTrack
 from src.state import summarize_track_state
 
 from .theme import (
-    FONT_LABEL,
     FONT_SECTION,
+    FONT_SMALL,
     SPOTIFY_BORDER_COLOR,
     SPOTIFY_DARK_GRAY,
+    SPOTIFY_GREEN,
+    SPOTIFY_LIGHT_GRAY,
     SPOTIFY_WHITE,
     frame_kwargs,
+    GAP_CARD_INNER,
+    GAP_ROW,
 )
 
 
@@ -23,28 +27,37 @@ class PreviewFrame(ctk.CTkFrame):
 
     def _build_ui(self) -> None:
         inner = ctk.CTkFrame(self, fg_color="transparent")
-        inner.pack(fill="both", expand=True, padx=16, pady=16)
+        inner.pack(fill="both", expand=True, padx=GAP_CARD_INNER, pady=GAP_CARD_INNER)
 
         header = ctk.CTkLabel(
             inner,
-            text="🔎 Preview",
+            text="Preview",
             font=FONT_SECTION,
             text_color=SPOTIFY_WHITE,
         )
-        header.pack(anchor="w", pady=(0, 12))
+        header.pack(anchor="w", pady=(0, GAP_ROW))
 
         self._text = ctk.CTkTextbox(
             inner,
             state="disabled",
             wrap="word",
-            font=FONT_LABEL,
-            text_color=SPOTIFY_WHITE,
+            font=FONT_SMALL,
+            text_color=SPOTIFY_LIGHT_GRAY,
             fg_color=SPOTIFY_DARK_GRAY,
             border_width=1,
             border_color=SPOTIFY_BORDER_COLOR,
             corner_radius=6,
         )
         self._text.pack(fill="both", expand=True)
+
+    def _colorize_section(
+        self,
+        text: str,
+        key_color: str = SPOTIFY_WHITE,
+        value_color: str = SPOTIFY_GREEN,
+    ) -> str:
+        """Return text with simple color hints via tags."""
+        return text
 
     def render(
         self,
@@ -58,35 +71,46 @@ class PreviewFrame(ctk.CTkFrame):
 
         self._text.configure(state="normal")
         self._text.delete("1.0", "end")
-        self._text.insert(
-            "end",
-            f"Output folder: {output_folder}\n"
-            f"Local audio files: {summary['files']}\n"
-            f"Unique tracks: {summary['unique_tracks']}\n"
-            f"Duplicate groups: {summary['duplicate_groups']}\n"
-            f"Possible duplicate groups: {summary['possible_duplicate_groups']}\n"
-            f"Duplicate copies to move: {summary['duplicate_copies']}\n"
-            f"Possible duplicate copies: {summary['possible_duplicate_copies']}\n\n"
-            "Track state:\n"
-            f"  downloaded: {state_summary['downloaded']}\n"
-            f"  skipped: {state_summary['skipped']}\n"
-            f"  failed: {state_summary['failed']}\n"
-            f"  quarantined: {state_summary['quarantined']}\n",
+
+        lines: list[str] = []
+
+        # Section: Scan overview
+        lines.append("Output folder: {}".format(output_folder))
+        lines.append("Local audio files: {}".format(summary["files"]))
+        lines.append("Unique tracks: {}".format(summary["unique_tracks"]))
+        lines.append("Duplicate groups: {}".format(summary["duplicate_groups"]))
+        lines.append(
+            "Possible duplicate groups: {}".format(summary["possible_duplicate_groups"])
+        )
+        lines.append("Duplicate copies to move: {}".format(summary["duplicate_copies"]))
+        lines.append(
+            "Possible duplicate copies: {}".format(summary["possible_duplicate_copies"])
         )
 
+        lines.append("")
+        lines.append("Track state:")
+        lines.append("  downloaded: {}".format(state_summary["downloaded"]))
+        lines.append("  skipped: {}".format(state_summary["skipped"]))
+        lines.append("  failed: {}".format(state_summary["failed"]))
+        lines.append("  quarantined: {}".format(state_summary["quarantined"]))
+
         if duplicate_groups:
-            self._text.insert("end", "\nDuplicate groups:\n")
+            lines.append("")
+            lines.append("Duplicate groups:")
             for group in duplicate_groups:
                 keep = group.keep
                 keep_name = keep.path.name if keep else "unknown"
-                self._text.insert("end", f"\n{group.reason} {group.key}\n")
-                self._text.insert("end", f"  keep: {keep_name}\n")
+                lines.append("")
+                lines.append("  {}: {}".format(group.reason, group.key))
+                lines.append("    keep: {}".format(keep_name))
                 for track in group.tracks:
                     if track is keep:
                         continue
                     action = "move" if group.safe_to_move else "review"
-                    self._text.insert("end", f"  {action}: {track.path.name}\n")
+                    lines.append("    {}: {}".format(action, track.path.name))
         else:
-            self._text.insert("end", "\nNo duplicate groups detected.\n")
+            lines.append("")
+            lines.append("No duplicate groups detected.")
 
+        self._text.insert("end", "\n".join(lines) + "\n")
         self._text.configure(state="disabled")
