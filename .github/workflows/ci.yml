@@ -113,7 +113,7 @@ jobs:
         run: python -c "from textual.app import App; from textual.widgets import Button, Input, Label, ProgressBar, RichLog, Select; print('All TUI imports OK')"
 
       - name: Check GUI imports work
-        run: python -c "import customtkinter; from src.gui.app import SpotifyDownloaderGUI; print('All GUI imports OK')"
+        run: python -c "from PySide6.QtWidgets import QApplication; from src.gui_qt.main_window import MainWindow; print('All GUI imports OK')"
 
       - name: Verify TUI module loads
         run: python -c "import spotify_downloader; print('TUI module loaded OK')"

@@ -33,7 +33,9 @@ def write_version_include(version: str, target: Path) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Generate installer/_version.iss from src.__version__.")
+    parser = argparse.ArgumentParser(
+        description="Generate installer/_version.iss from src.__version__."
+    )
     parser.add_argument(
         "--target",
         type=Path,

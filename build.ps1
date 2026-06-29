@@ -29,9 +29,9 @@ function Invoke-Clean {
 }
 
 if ($Clean) {
-Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "Spotify Downloader - Clean" -ForegroundColor Cyan
-Write-Host "========================================" -ForegroundColor Cyan
+    Write-Host "========================================" -ForegroundColor Cyan
+    Write-Host "Spotify Downloader - Clean" -ForegroundColor Cyan
+    Write-Host "========================================" -ForegroundColor Cyan
     Invoke-Clean
     exit 0
 }
@@ -59,16 +59,14 @@ Invoke-Clean
 
 Write-Host ""
 Write-Host "[4/5] Building executable..." -ForegroundColor Yellow
-$iconPath = "assets\icon.ico"
-if (Test-Path $iconPath) {
-    Write-Host "  Note: icon file exists but PyInstaller icon embedding can be brittle; building without --icon for reliability." -ForegroundColor Yellow
-}
 
 $pyinstallerArgs = @(
     "--noconfirm"
     "--clean"
     "--name", "SpotifyDownloader"
-    "--add-data", "src;src"
+    "--hidden-import", "PySide6.QtWidgets"
+    "--hidden-import", "PySide6.QtCore"
+    "--hidden-import", "PySide6.QtGui"
     "--exclude-module", "numpy"
     "--exclude-module", "scipy"
     "--exclude-module", "sklearn"
@@ -79,6 +77,8 @@ $pyinstallerArgs = @(
     "--exclude-module", "pytest"
     "--exclude-module", "mypy"
     "--exclude-module", "ruff"
+    "--exclude-module", "customtkinter"
+    "--exclude-module", "textual"
     "-s"
     "-w"
     "gui_app.py"

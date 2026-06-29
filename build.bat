@@ -38,7 +38,9 @@ echo [4/5] Building executable...
 set PYTHONOPTIMIZE=2
 pyinstaller --noconfirm --clean ^
     --name "SpotifyDownloader" ^
-    --add-data "src;src" ^
+    --hidden-import PySide6.QtWidgets ^
+    --hidden-import PySide6.QtCore ^
+    --hidden-import PySide6.QtGui ^
     --exclude-module numpy ^
     --exclude-module scipy ^
     --exclude-module sklearn ^
@@ -49,6 +51,8 @@ pyinstaller --noconfirm --clean ^
     --exclude-module pytest ^
     --exclude-module mypy ^
     --exclude-module ruff ^
+    --exclude-module customtkinter ^
+    --exclude-module textual ^
     -s -w ^
     gui_app.py
 

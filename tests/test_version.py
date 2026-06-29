@@ -23,7 +23,9 @@ class TestVersionConstant:
 
 
 class TestWriteVersionInclude:
-    def test_function_emits_isspp_define(self, tmp_path: pytest.TempPathFactory) -> None:
+    def test_function_emits_isspp_define(
+        self, tmp_path: pytest.TempPathFactory
+    ) -> None:
         target = tmp_path / "version.iss"
         write_version_include("9.9.9", target)
         content = target.read_text(encoding="utf-8")
@@ -59,7 +61,7 @@ class TestProjectConsistency:
             "stays in sync with src.__version__"
         )
         # Guard against reverting to a hardcoded literal MyAppVersion.
-        assert not re.search(r'#define\s+MyAppVersion\b', text), (
+        assert not re.search(r"#define\s+MyAppVersion\b", text), (
             "MyAppVersion should be defined via the generated include, not inline"
         )
 

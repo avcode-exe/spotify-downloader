@@ -1,106 +1,86 @@
 from __future__ import annotations
 
+from PySide6.QtGui import QColor, QFont
 
-from src.gui.theme import (
-    FONT_BUTTON,
-    FONT_LABEL,
-    FONT_MONO,
-    FONT_SECTION,
-    FONT_SUBTITLE,
-    FONT_TITLE,
+from src.gui_qt.theme import (
     SPOTIFY_BLACK,
     SPOTIFY_BORDER_COLOR,
     SPOTIFY_DARK_GRAY,
     SPOTIFY_DISABLED_GRAY,
     SPOTIFY_GREEN,
-    SPOTIFY_HOVER_GREEN,
     SPOTIFY_LIGHT_GRAY,
     SPOTIFY_WHITE,
-    apply_theme,
-    button_kwargs,
-    frame_kwargs,
+    get_button_font,
+    get_font,
+    get_label_font,
+    get_mono_font,
+    get_section_font,
+    get_subtitle_font,
+    get_title_font,
 )
 
 
 class TestThemeConstants:
-    def test_all_color_constants_are_hex(self) -> None:
+    def test_all_color_constants_are_qcolor(self) -> None:
         colors = [
             SPOTIFY_GREEN,
             SPOTIFY_BLACK,
             SPOTIFY_DARK_GRAY,
             SPOTIFY_LIGHT_GRAY,
             SPOTIFY_WHITE,
-            SPOTIFY_HOVER_GREEN,
             SPOTIFY_DISABLED_GRAY,
             SPOTIFY_BORDER_COLOR,
         ]
         for color in colors:
-            assert color.startswith("#")
-            assert len(color) in (7, 4)
+            assert isinstance(color, QColor)
+            assert color.isValid()
 
-    def test_font_constants_are_tuples(self) -> None:
-        for font in (
-            FONT_TITLE,
-            FONT_SUBTITLE,
-            FONT_LABEL,
-            FONT_BUTTON,
-            FONT_SECTION,
-            FONT_MONO,
-        ):
-            assert isinstance(font, tuple)
-            assert len(font) >= 2
+    def test_color_values_match_hex(self) -> None:
+        assert SPOTIFY_GREEN.name() == "#1db954"
+        assert SPOTIFY_BLACK.name() == "#0a0a0a"
+        assert SPOTIFY_WHITE.name() == "#ffffff"
+        assert SPOTIFY_BORDER_COLOR.name() == "#333333"
+
+    def test_font_constants_are_qfonts(self) -> None:
+        fonts = [
+            (get_title_font(), "Segoe UI"),
+            (get_subtitle_font(), "Segoe UI"),
+            (get_label_font(), "Segoe UI"),
+            (get_button_font(), "Segoe UI"),
+            (get_section_font(), "Segoe UI"),
+            (get_mono_font(), "Cascadia Code"),
+        ]
+        for font, expected_family in fonts:
+            assert isinstance(font, QFont)
+            assert font.family() == expected_family
 
     def test_font_title_bold(self) -> None:
-        assert FONT_TITLE[2] == "bold"
+        font = get_title_font()
+        assert font.weight() == QFont.Weight.Bold
 
     def test_font_button_bold(self) -> None:
-        assert FONT_BUTTON[2] == "bold"
+        font = get_button_font()
+        assert font.weight() == QFont.Weight.Bold
+
+    def test_get_font_caches(self) -> None:
+        font1 = get_font("Segoe UI", 10, QFont.Weight.Normal, False, "test_cache")
+        font2 = get_font("Segoe UI", 10, QFont.Weight.Normal, False, "test_cache")
+        assert font1 is font2
 
 
-class TestFrameKwargs:
-    def test_returns_dict(self) -> None:
-        result = frame_kwargs()
-        assert isinstance(result, dict)
+class TestFontHelpers:
+    def test_get_font_default_family(self) -> None:
+        font = get_font()
+        assert font.family() == "Segoe UI"
 
-    def test_expected_keys(self) -> None:
-        result = frame_kwargs()
-        assert "fg_color" in result
-        assert "corner_radius" in result
-        assert "border_width" in result
-        assert "border_color" in result
+    def test_get_font_custom_family(self) -> None:
+        font = get_font("Consolas", 12, QFont.Weight.Bold, True, "custom")
+        assert font.family() == "Consolas"
+        assert font.pointSize() == 12
+        assert font.weight() == QFont.Weight.Bold
+        assert font.italic() is True
 
-    def test_corner_radius_is_int(self) -> None:
-        assert isinstance(frame_kwargs()["corner_radius"], int)
-
-    def test_border_width_is_int(self) -> None:
-        assert isinstance(frame_kwargs()["border_width"], int)
-
-
-class TestButtonKwargs:
-    def test_primary_style(self) -> None:
-        result = button_kwargs("primary")
-        assert result["fg_color"] == SPOTIFY_GREEN
-        assert result["text_color"] == SPOTIFY_BLACK
-        assert result["border_width"] == 0
-        assert result["font"] == FONT_BUTTON
-
-    def test_secondary_style(self) -> None:
-        result = button_kwargs("secondary")
-        assert result["fg_color"] == "transparent"
-        assert result["text_color"] == SPOTIFY_WHITE
-        assert result["border_width"] == 1
-        assert result["font"] == FONT_BUTTON
-
-    def test_danger_style(self) -> None:
-        result = button_kwargs("danger")
-        assert result["fg_color"] == "#E91429"
-        assert result["text_color"] == SPOTIFY_WHITE
-        assert result["border_width"] == 0
-
-    def test_unknown_style_returns_empty(self) -> None:
-        assert button_kwargs("unknown") == {}
-
-
-class TestApplyTheme:
-    def test_apply_theme_runs_without_error(self) -> None:
-        apply_theme()
+    def test_get_mono_font(self) -> None:
+        font = get_mono_font()
+        assert font.family() == "Cascadia Code"
+        assert font.pointSize() == 10

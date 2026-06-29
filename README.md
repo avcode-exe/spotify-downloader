@@ -8,7 +8,7 @@ YouTube Music (via [spotDL](https://github.com/spotDL/spotify-downloader)).
 ## Features
 
 - **Terminal UI** — Rich, interactive interface built with [Textual](https://textual.textualize.io/)
-- **Modern GUI (optional)** — Lightweight desktop app built with [CustomTkinter](https://github.com/TomSchimansky/CustomTkinter) (Windows/macOS/Linux)
+- **Modern GUI (optional)** — Desktop app built with [PySide6](https://pyside.org/) (Qt 6) featuring sidebar navigation, QSS dark theme, guided onboarding tour, and table/tree views — Windows/macOS/Linux
 - **Playlist & Track Downloads** — Paste any public Spotify playlist or individual track URL
 - **Fresh Download Mode** — Overwrite existing files for a clean re-download
 - **Retry Failed** — Automatically retry tracks that failed to download (now tracks all failed tracks, not just playlist tracks)
@@ -50,6 +50,7 @@ You can install and run this project in three ways:
 
 - Python 3.10 or later
 - FFmpeg (spotDL can auto-install it)
+- PySide6 (installed via `pip install -r requirements.txt`)
 
 ### Install and run
 
@@ -66,21 +67,24 @@ python gui_app.py
 
 ### GUI Features
 
+- **Sidebar Navigation** — Left sidebar with icons for Home, Settings, History, Preview, Duplicates, and Log
 - **Playlist or Track URL input** — paste any public Spotify playlist or track URL
-- **Output folder** — choose where to save downloads
+- **Output folder picker** — choose where to save downloads with browse dialog
 - **Download / Fresh / Retry Failed** — full download control
-- **Preview** — scan local folder and see duplicate groups
-- **Duplicates** — review and safely move duplicate copies
+- **Preview** — table view of local audio files with metadata (title, artist, duration, bitrate, size)
+- **Duplicates** — tree view of duplicate groups with expandable rows
 - **Settings** — configure format, bitrate, audio source, proxy, and cookie file
-- **History** — view past download sessions
-- **Live log** — real-time download progress and status
+- **History** — table view of past download sessions with status badges
+- **Live log** — syntax-highlighted log viewer with color-coded severity levels
+- **Guided tour** — multi-step walkthrough on first launch
+- **Progress tracking** — real-time progress bar, tracks/min rate, and ETA
 
 ### Uninstall GUI dependencies
 
 If you no longer need the GUI, uninstall its packages:
 
 ```powershell
-pip uninstall customtkinter
+pip uninstall pyside6 shiboken6
 ```
 
 The TUI remains available and can be launched with `python spotify_downloader.py`.
@@ -411,20 +415,34 @@ spotify_downloader/
 │   └── write_version_include.py  # Generates installer/_version.iss from src.__version__
 ├── assets/
 │   └── icon.ico           # Default application icon
-├── gui_app.py             # Modern GUI entry point (CustomTkinter)
+├── gui_app.py             # Modern GUI entry point (PySide6/Qt 6)
 ├── spotify_downloader.py  # TUI entry point (Textual) + download logic
 ├── src/
-│   ├── gui/               # GUI package
-│   │   ├── app.py         # Main GUI application
-│   │   ├── home_frame.py  # Playlist URL and download controls
+│   ├── gui_qt/            # NEW: PySide6 GUI package
+│   │   ├── __init__.py
+│   │   ├── main_window.py # QMainWindow with sidebar + stacked widget
+│   │   ├── home_panel.py  # URL input, output folder, action buttons
+│   │   ├── settings_panel.py
+│   │   ├── history_panel.py
+│   │   ├── preview_panel.py
+│   │   ├── duplicates_panel.py
+│   │   ├── log_panel.py
+│   │   ├── workers.py     # QThread-based spotDL worker
+│   │   ├── tour.py        # Guided onboarding tour
+│   │   ├── theme.py       # Color/font constants
+│   │   ├── icons.py       # Icon helpers (SVG → QPixmap)
+│   │   └── utils.py       # Shared helpers
+│   ├── gui/               # Legacy CustomTkinter GUI (kept for reference)
+│   │   ├── app.py
+│   │   ├── home_frame.py
 │   │   ├── settings_frame.py
 │   │   ├── preview_frame.py
 │   │   ├── duplicates_frame.py
 │   │   ├── history_frame.py
 │   │   ├── log_frame.py
-│   │   ├── workers.py     # Background spotDL execution
+│   │   ├── workers.py
 │   │   ├── utils.py
-│   │   └── theme.py       # Shared theme (colors, fonts, buttons)
+│   │   └── theme.py
 │   ├── models.py          # Shared dataclasses and constants
 │   ├── manifest.py        # Local scan and duplicate grouping
 │   ├── duplicates.py      # Duplicate move/quarantine logic
