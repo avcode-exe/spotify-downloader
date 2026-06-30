@@ -48,7 +48,7 @@ class WorkerResult:
     error: str | None = None
 
 
-class SpotDLWorker(QThread):
+class SpotDLWorker(QThread):  # type: ignore[misc]
     """Background worker that runs spotDL and emits signals for UI updates."""
 
     # Signals

@@ -6,7 +6,8 @@ import os
 import time
 from typing import Any
 
-from PySide6.QtCore import QSettings, QTimer, Slot
+from PySide6.QtCore import QSettings, QTimer
+from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
@@ -37,7 +38,7 @@ from .tour import TourOverlay
 from .workers import SpotDLWorker
 
 
-class MainWindow(QWidget):
+class MainWindow(QWidget):  # type: ignore[misc]
     """Main application window with sidebar navigation."""
 
     def __init__(self) -> None:
@@ -245,7 +246,7 @@ class MainWindow(QWidget):
         self._failed_tracks.clear()
         if self._worker is not None:
             self._worker.cancel()
-            self._worker.wait(timeout=3000)
+            self._worker.wait()
         self._worker = SpotDLWorker(self._settings, output_folder)
         self._home_panel.set_busy(True)
         self._sidebar.set_busy(True)
@@ -274,7 +275,7 @@ class MainWindow(QWidget):
         if self._worker is not None:
             self._worker.cancel()
             self._worker.terminate()
-            self._worker.wait(timeout=3000)
+            self._worker.wait()
         self._worker = SpotDLWorker(self._settings, output_folder)
         urls = list(self._failed_tracks)
         self._failed_tracks.clear()
@@ -298,7 +299,7 @@ class MainWindow(QWidget):
             self._worker.cancel()
             self._home_panel.update_status("Cancelled", progress=0.0)
 
-    def closeEvent(self, event) -> None:
+    def closeEvent(self, event: QCloseEvent) -> None:
         self._on_quit()
         event.accept()
 
@@ -313,12 +314,10 @@ class MainWindow(QWidget):
         if directory:
             self._home_panel.set_output_folder(directory)
 
-    @Slot(str)
     def _on_worker_log(self, message: str) -> None:
         self._log_panel.write(message)
 
-    @Slot(dict)
-    def _on_worker_status(self, data: dict) -> None:
+    def _on_worker_status(self, data: dict[str, Any]) -> None:
         self._home_panel.update_status(
             data.get("status", ""),
             data.get("track", "\u2014"),
@@ -326,28 +325,24 @@ class MainWindow(QWidget):
         )
         self._status_label.setText(data.get("status", "Ready"))
 
-    @Slot(dict)
-    def _on_worker_progress(self, data: dict) -> None:
+    def _on_worker_progress(self, data: dict[str, Any]) -> None:
         total = data.get("total", 0)
         done = data.get("done", 0)
         if total > 0:
             self._home_panel._progress_bar.setValue(int(done / total * 100))
 
-    @Slot(str)
     def _on_worker_track(self, track: str) -> None:
         current_status = self._home_panel._status_indicator.text()
         self._home_panel.update_status(
             current_status, track, self._home_panel.get_progress_fraction()
         )
 
-    @Slot(str)
     def _on_worker_failed(self, url: str) -> None:
         if url not in self._failed_tracks:
             self._failed_tracks.append(url)
         self._home_panel.set_retry_enabled(True)
 
-    @Slot(dict)
-    def _on_worker_history(self, data: dict) -> None:
+    def _on_worker_history(self, data: dict[str, Any]) -> None:
         self._append_history(
             data["url"],
             data["output_folder"],
@@ -355,8 +350,7 @@ class MainWindow(QWidget):
             data["status"],
         )
 
-    @Slot(dict)
-    def _on_worker_done(self, data: dict) -> None:
+    def _on_worker_done(self, data: dict[str, Any]) -> None:
         self._track_state = load_track_state()
         self._home_panel.set_busy(False)
         self._sidebar.set_busy(False)
@@ -364,7 +358,6 @@ class MainWindow(QWidget):
         self._render_history()
         self._schedule_preview_refresh()
 
-    @Slot(str)
     def _on_worker_error(self, error: str) -> None:
         self._log_panel.write(f"Error: {error}")
         self._home_panel.set_busy(False)

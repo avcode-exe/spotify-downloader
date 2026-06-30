@@ -25,7 +25,7 @@ def main() -> None:
 
     icon_path = Path(__file__).resolve().parent / "assets" / "icon.ico"
     if not icon_path.exists():
-        icon_path = Path(sys._MEIPASS or "") / "assets" / "icon.ico"
+        icon_path = Path(getattr(sys, "_MEIPASS", "")) / "assets" / "icon.ico"
     icon = QIcon(str(icon_path))
     app.setWindowIcon(icon)
 

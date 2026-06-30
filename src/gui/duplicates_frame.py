@@ -17,7 +17,7 @@ from .theme import (
 )
 
 
-class DuplicatesFrame(ctk.CTkFrame):
+class DuplicatesFrame(ctk.CTkFrame):  # type: ignore[misc]
     def __init__(self, master: ctk.CTk) -> None:
         super().__init__(master, **frame_kwargs())
         self._build_ui()

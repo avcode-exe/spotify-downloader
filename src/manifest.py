@@ -8,6 +8,8 @@ from typing import Any, cast
 
 from .models import AUDIO_EXTENSIONS, DuplicateGroup, LocalTrack
 
+__all__ = ["AUDIO_EXTENSIONS", "DuplicateGroup", "LocalTrack"]
+
 _METADATA_CACHE: dict[Path, tuple[float, int, dict[str, Any]]] = {}
 _METADATA_CACHE_LOCK = threading.Lock()
 _METADATA_CACHE_MAXSIZE = 2048

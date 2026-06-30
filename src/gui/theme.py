@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 # ── Color Palette ──────────────────────────────────────────────────────────────
 # Refined dark theme with richer depth, softer contrast, and a modern feel.
 
@@ -160,7 +162,9 @@ def textbox_kwargs() -> dict[str, object]:
     }
 
 
-def label_kwargs(color: str | None = None, font: tuple | None = None) -> dict[str, object]:
+def label_kwargs(
+    color: str | None = None, font: tuple[Any, ...] | None = None
+) -> dict[str, object]:
     kw: dict[str, object] = {}
     if color:
         kw["text_color"] = color

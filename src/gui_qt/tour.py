@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QCursor
 from PySide6.QtWidgets import (
@@ -11,16 +13,16 @@ from PySide6.QtWidgets import (
 )
 
 
-class TourOverlay(QWidget):
+class TourOverlay(QWidget):  # type: ignore[misc]
     """Overlay that guides users through the app on first launch."""
 
     def __init__(self, parent: QWidget) -> None:
         super().__init__(parent)
-        self._steps: list[dict] = []
+        self._steps: list[dict[str, Any]] = []
         self._current_step = 0
         self._build_ui()
 
-    def set_steps(self, steps: list[dict]) -> None:
+    def set_steps(self, steps: list[dict[str, Any]]) -> None:
         self._steps = steps
         self._current_step = 0
         self._show_step(0)
@@ -58,9 +60,11 @@ class TourOverlay(QWidget):
 
             self.setGeometry(x, y, 280, 150)
         else:
+            parent = self.parent()
+            assert parent is not None
             self.setGeometry(
-                self.parent().geometry().width() // 2 - 150,
-                self.parent().geometry().height() // 2 - 80,
+                parent.geometry().width() // 2 - 150,
+                parent.geometry().height() // 2 - 80,
                 300,
                 160,
             )

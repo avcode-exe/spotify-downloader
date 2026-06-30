@@ -56,7 +56,7 @@ def _build_logo_svg() -> str:
 def _render_png(size: int, dest: Path) -> None:
     """Render the logo at *size*×*size* pixels using only the stdlib + Pillow."""
     try:
-        from PIL import Image, ImageDraw  # type: ignore[import]
+        from PIL import Image, ImageDraw
     except ImportError:
         raise SystemExit(
             "Pillow is required to generate the icon. Install it with: pip install Pillow"
@@ -132,7 +132,7 @@ def _build_ico(png_sizes: Iterable[int], dest: Path) -> None:
     preserved (Pillow's ICO saver silently drops non-standard sizes).
     """
     try:
-        from PIL import Image  # type: ignore[import]
+        from PIL import Image
     except ImportError:
         raise SystemExit("Pillow is required: pip install Pillow") from None
 

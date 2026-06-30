@@ -9,7 +9,7 @@ def _points(*coords: tuple[float, float]) -> list[QPoint]:
     return [QPoint(int(round(x)), int(round(y))) for x, y in coords]
 
 
-def _polygon(*coords: tuple[float, float]):
+def _polygon(*coords: tuple[float, float]) -> list[QPoint]:
     """Create a QPoint list for drawPolygon."""
     return _points(*coords)
 

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 import customtkinter as ctk
 
 from src.manifest import summarize_scan
@@ -20,7 +22,7 @@ from .theme import (
 )
 
 
-class PreviewFrame(ctk.CTkFrame):
+class PreviewFrame(ctk.CTkFrame):  # type: ignore[misc]
     def __init__(self, master: ctk.CTk) -> None:
         super().__init__(master, **frame_kwargs())
         self._build_ui()
@@ -63,7 +65,7 @@ class PreviewFrame(ctk.CTkFrame):
         self,
         tracks: list[LocalTrack],
         duplicate_groups: list[DuplicateGroup],
-        track_state: list[dict],
+        track_state: list[dict[str, Any]],
         output_folder: str,
     ) -> None:
         summary = summarize_scan(tracks, duplicate_groups)

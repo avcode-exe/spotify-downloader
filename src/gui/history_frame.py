@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 import customtkinter as ctk
 
 from .theme import (
@@ -15,7 +17,7 @@ from .theme import (
 )
 
 
-class HistoryFrame(ctk.CTkFrame):
+class HistoryFrame(ctk.CTkFrame):  # type: ignore[misc]
     def __init__(self, master: ctk.CTk) -> None:
         super().__init__(master, **frame_kwargs())
         self._build_ui()
@@ -45,7 +47,7 @@ class HistoryFrame(ctk.CTkFrame):
         )
         self._text.pack(fill="both", expand=True)
 
-    def render(self, history: list[dict], track_state_summary: dict[str, int]) -> None:
+    def render(self, history: list[dict[str, Any]], track_state_summary: dict[str, int]) -> None:
         self._text.configure(state="normal")
         self._text.delete("1.0", "end")
 

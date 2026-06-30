@@ -27,7 +27,7 @@ from .theme import (
 )
 
 
-class HomeFrame(ctk.CTkFrame):
+class HomeFrame(ctk.CTkFrame):  # type: ignore[misc]
     def __init__(
         self,
         master: ctk.CTk,

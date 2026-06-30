@@ -16,7 +16,7 @@ from src.models import DuplicateGroup
 from .theme import SPOTIFY_WHITE, get_section_font
 
 
-class DuplicatesPanel(QWidget):
+class DuplicatesPanel(QWidget):  # type: ignore[misc]
     """Duplicates panel showing duplicate groups in a tree view."""
 
     def __init__(self) -> None:

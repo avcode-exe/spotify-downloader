@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (
 from .theme import get_button_font, get_label_font, get_section_font
 
 
-class HomePanel(QWidget):
+class HomePanel(QWidget):  # type: ignore[misc]
     """Home panel with URL input, output folder, and download controls."""
 
     download_clicked = Signal()
@@ -217,13 +217,17 @@ class HomePanel(QWidget):
         self._retry_btn.setEnabled(enabled)
 
     def get_progress_fraction(self) -> float:
-        return self._progress_bar.value() / 100.0
+        from typing import cast
+
+        return cast(int, self._progress_bar.value()) / 100.0
 
     def set_progress_fraction(self, fraction: float) -> None:
         self._progress_bar.setValue(int(fraction * 100))
 
     def get_url(self) -> str:
-        return self._url_input.text().strip()
+        from typing import cast
+
+        return cast(str, self._url_input.text()).strip()
 
     def get_output_folder(self) -> str:
         return self._output_input.text().strip() or "./downloads"

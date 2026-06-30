@@ -38,7 +38,7 @@ BROWSER_OPTIONS: list[tuple[str, str]] = [
 _DUPLICATE_POLICY_MAP = {code: label for label, code in DUPLICATE_POLICY_OPTIONS}
 
 
-class SettingsFrame(ctk.CTkFrame):
+class SettingsFrame(ctk.CTkFrame):  # type: ignore[misc]
     def __init__(
         self,
         master: ctk.CTk,

@@ -34,7 +34,7 @@ from .theme import SPOTIFY_BLACK, SPOTIFY_GREEN, apply_theme
 from .workers import SpotDLWorker, WorkerResult
 
 
-class SpotifyDownloaderGUI(ctk.CTk):
+class SpotifyDownloaderGUI(ctk.CTk):  # type: ignore[misc]
     def __init__(self) -> None:
         apply_theme()
         super().__init__()

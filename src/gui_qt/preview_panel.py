@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QCursor
 from PySide6.QtWidgets import (
@@ -11,12 +13,12 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from src.manifest import summarize_scan
+from src.manifest import DuplicateGroup, LocalTrack, summarize_scan
 
 from .theme import SPOTIFY_WHITE, get_section_font
 
 
-class PreviewPanel(QWidget):
+class PreviewPanel(QWidget):  # type: ignore[misc]
     """Preview panel showing local audio files in a table."""
 
     def __init__(self) -> None:
@@ -74,9 +76,9 @@ class PreviewPanel(QWidget):
 
     def render(
         self,
-        tracks,
-        duplicate_groups,
-        track_state,
+        tracks: list[LocalTrack],
+        duplicate_groups: list[DuplicateGroup],
+        track_state: list[dict[str, Any]],
         output_folder: str,
     ) -> None:
         self._table.setRowCount(len(tracks))

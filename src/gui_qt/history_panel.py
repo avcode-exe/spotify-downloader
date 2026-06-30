@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QCursor
 from PySide6.QtWidgets import (
@@ -14,7 +16,7 @@ from PySide6.QtWidgets import (
 from .theme import SPOTIFY_WHITE, get_section_font
 
 
-class HistoryPanel(QWidget):
+class HistoryPanel(QWidget):  # type: ignore[misc]
     """History panel showing past download sessions in a table."""
 
     def __init__(self) -> None:
@@ -69,7 +71,7 @@ class HistoryPanel(QWidget):
         """)
         layout.addWidget(self._table)
 
-    def render(self, history: list[dict]) -> None:
+    def render(self, history: list[dict[str, Any]]) -> None:
         self._table.setRowCount(len(history))
 
         for i, entry in enumerate(history):
@@ -99,9 +101,10 @@ class HistoryPanel(QWidget):
 
             # Color-code status
             status_item = self._table.item(i, 3)
-            if status == "COMPLETED":
-                status_item.setForeground(Qt.GlobalColor.green)
-            elif status == "FAILED":
-                status_item.setForeground(Qt.GlobalColor.red)
-            elif status == "CANCELLED":
-                status_item.setForeground(Qt.GlobalColor.yellow)
+            if status_item is not None:
+                if status == "COMPLETED":
+                    status_item.setForeground(Qt.GlobalColor.green)
+                elif status == "FAILED":
+                    status_item.setForeground(Qt.GlobalColor.red)
+                elif status == "CANCELLED":
+                    status_item.setForeground(Qt.GlobalColor.yellow)

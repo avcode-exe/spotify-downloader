@@ -17,7 +17,7 @@ from .icons import create_svg_icon
 from .theme import get_button_font
 
 
-class Sidebar(QWidget):
+class Sidebar(QWidget):  # type: ignore[misc]
     """Left sidebar with navigation items."""
 
     section_changed = Signal(str)

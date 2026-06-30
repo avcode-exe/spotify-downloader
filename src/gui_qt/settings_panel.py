@@ -36,7 +36,7 @@ BROWSER_OPTIONS: list[tuple[str, str]] = [
 _DUPLICATE_POLICY_MAP = {code: label for label, code in DUPLICATE_POLICY_OPTIONS}
 
 
-class SettingsPanel(QWidget):
+class SettingsPanel(QWidget):  # type: ignore[misc]
     """Settings panel with form layout for all download configuration."""
 
     settings_changed = Signal(dict)

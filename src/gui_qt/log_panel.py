@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (
 from .theme import SPOTIFY_WHITE, get_section_font
 
 
-class LogPanel(QWidget):
+class LogPanel(QWidget):  # type: ignore[misc]
     """Log panel showing real-time download progress and status."""
 
     def __init__(self) -> None:
