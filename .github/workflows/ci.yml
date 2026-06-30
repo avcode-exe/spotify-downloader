@@ -53,7 +53,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libegl1 libgl1-mesa-glx libxkbcommon-x11-0
+          sudo apt-get install -y --no-install-recommends libegl1 libgl1 libxkbcommon-x11-0
 
       - name: Run test suite (headless on Unix)
         run: |
@@ -124,7 +124,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libegl1 libgl1-mesa-glx libxkbcommon-x11-0
+          sudo apt-get install -y --no-install-recommends libegl1 libgl1 libxkbcommon-x11-0
 
       - name: Check TUI imports work
         run: python -c "from textual.app import App; from textual.widgets import Button, Input, Label, ProgressBar, RichLog, Select; print('All TUI imports OK')"
