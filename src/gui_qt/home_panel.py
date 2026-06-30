@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import cast
+
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QCursor
 from PySide6.QtWidgets import (
@@ -217,16 +219,12 @@ class HomePanel(QWidget):  # type: ignore[misc]
         self._retry_btn.setEnabled(enabled)
 
     def get_progress_fraction(self) -> float:
-        from typing import cast
-
         return cast(int, self._progress_bar.value()) / 100.0
 
     def set_progress_fraction(self, fraction: float) -> None:
         self._progress_bar.setValue(int(fraction * 100))
 
     def get_url(self) -> str:
-        from typing import cast
-
         return cast(str, self._url_input.text()).strip()
 
     def get_output_folder(self) -> str:

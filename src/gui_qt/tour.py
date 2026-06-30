@@ -62,9 +62,10 @@ class TourOverlay(QWidget):  # type: ignore[misc]
         else:
             parent = self.parent()
             assert parent is not None
+            geo = parent.geometry()
             self.setGeometry(
-                parent.geometry().width() // 2 - 150,
-                parent.geometry().height() // 2 - 80,
+                geo.width() // 2 - 150,
+                geo.height() // 2 - 80,
                 300,
                 160,
             )

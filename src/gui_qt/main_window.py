@@ -306,7 +306,7 @@ class MainWindow(QWidget):  # type: ignore[misc]
     def _on_quit(self) -> None:
         if self._worker is not None:
             self._worker.cancel()
-            self._worker.wait(timeout=5000)
+            self._worker.wait()
         self.close()
 
     def _browse_output(self) -> None:
