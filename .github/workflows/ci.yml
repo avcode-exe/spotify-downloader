@@ -56,6 +56,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends libegl1 libgl1 libxkbcommon-x11-0
 
       - name: Run test suite (headless on Unix)
+        shell: bash
         run: |
           if [ "${{ runner.os }}" != "Windows" ]; then
             xvfb-run -a python -m pytest tests/ -v --tb=short
