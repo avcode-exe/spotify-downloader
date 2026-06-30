@@ -47,10 +47,15 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Install test dependencies
-        run: pip install pytest
+        run: pip install pytest pytest-qt
 
-      - name: Run test suite
-        run: python -m pytest tests/ -v --tb=short
+      - name: Run test suite (headless on Unix)
+        run: |
+          if [ "${{ runner.os }}" != "Windows" ]; then
+            xvfb-run -a python -m pytest tests/ -v --tb=short
+          else
+            python -m pytest tests/ -v --tb=short
+          fi
 
   typecheck:
     name: Type Check

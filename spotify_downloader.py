@@ -7,6 +7,7 @@ playlists by matching tracks to YouTube Music via spotDL.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import importlib.metadata
 import json
 import logging
@@ -175,10 +176,8 @@ def _setup_logger() -> logging.Logger:
         )
     )
     logger.addHandler(handler)
-    try:
+    with contextlib.suppress(OSError):
         os.chmod(LOG_FILE, 0o600)
-    except OSError:
-        pass
     return logger
 
 

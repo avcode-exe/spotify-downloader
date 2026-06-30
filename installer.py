@@ -12,7 +12,6 @@ import re
 import subprocess
 import sys
 
-
 GUI_REQUIREMENTS = ["customtkinter>=5.2.0"]
 TUI_REQUIREMENTS = ["textual>=2.0.0"]
 CORE_REQUIREMENTS = ["spotdl>=4.5.0", "mutagen>=1.45.0"]

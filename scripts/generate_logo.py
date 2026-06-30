@@ -59,8 +59,7 @@ def _render_png(size: int, dest: Path) -> None:
         from PIL import Image, ImageDraw  # type: ignore[import]
     except ImportError:
         raise SystemExit(
-            "Pillow is required to generate the icon. "
-            "Install it with: pip install Pillow"
+            "Pillow is required to generate the icon. Install it with: pip install Pillow"
         ) from None
 
     img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
@@ -77,7 +76,7 @@ def _render_png(size: int, dest: Path) -> None:
     draw.rounded_rectangle(
         [pad, pad, pad + bg_size, pad + bg_size],
         radius=radius,
-        fill=(29, 185, 84),          # #1DB954
+        fill=(29, 185, 84),  # #1DB954
     )
 
     # Inner ring (subtle)
@@ -112,13 +111,13 @@ def _render_png(size: int, dest: Path) -> None:
     # The chevron spans from roughly y=120 to y=260, x=130 to x=382
     # We draw it as a polygon
     head_points = [
-        (int(256 * scale), int(120 * scale)),   # tip
-        (int(382 * scale), int(260 * scale)),   # right shoulder
-        (int(330 * scale), int(260 * scale)),   # right inner
-        (int(330 * scale), int(370 * scale)),   # right bottom
-        (int(182 * scale), int(370 * scale)),   # left bottom
-        (int(182 * scale), int(260 * scale)),   # left inner
-        (int(130 * scale), int(260 * scale)),   # left shoulder
+        (int(256 * scale), int(120 * scale)),  # tip
+        (int(382 * scale), int(260 * scale)),  # right shoulder
+        (int(330 * scale), int(260 * scale)),  # right inner
+        (int(330 * scale), int(370 * scale)),  # right bottom
+        (int(182 * scale), int(370 * scale)),  # left bottom
+        (int(182 * scale), int(260 * scale)),  # left inner
+        (int(130 * scale), int(260 * scale)),  # left shoulder
     ]
     draw.polygon(head_points, fill=(255, 255, 255))
 
@@ -167,10 +166,10 @@ def _build_ico(png_sizes: Iterable[int], dest: Path) -> None:
                 "<BBBBHHII",
                 width_byte,
                 height_byte,
-                0,      # color count (0 = truecolor)
-                0,      # reserved
-                1,      # planes
-                32,     # bit count (RGBA)
+                0,  # color count (0 = truecolor)
+                0,  # reserved
+                1,  # planes
+                32,  # bit count (RGBA)
                 len(png_bytes),
                 offset,
             )
