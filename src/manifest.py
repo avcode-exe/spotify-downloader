@@ -24,7 +24,7 @@ def normalize_name(value: str) -> str:
 def _first_audio_value(audio: object, key: str) -> str | None:
     try:
         value = audio.get(key)  # type: ignore[attr-defined]
-    except Exception:
+    except (AttributeError, TypeError):
         return None
     if isinstance(value, list):
         return str(value[0]).strip() if value else None
@@ -41,7 +41,9 @@ def _read_audio_metadata(path: Path) -> dict[str, object]:
     except OSError:
         return {}
 
-    cached = _METADATA_CACHE.get(path)
+    cached: tuple[float, int, dict[str, Any]] | None = None
+    with _METADATA_CACHE_LOCK:
+        cached = _METADATA_CACHE.get(path)
     if cached is not None and cached[0] == mtime and cached[1] == size:
         return cached[2]
 
@@ -49,7 +51,7 @@ def _read_audio_metadata(path: Path) -> dict[str, object]:
         import mutagen
 
         audio = mutagen.File(str(path), easy=True)
-    except Exception:
+    except (ImportError, Exception):
         audio = None
 
     metadata: dict[str, object] = {}
@@ -134,9 +136,7 @@ def group_duplicates(tracks: list[LocalTrack]) -> list[DuplicateGroup]:
                 track,
             )
         elif track.title:
-            _add_group(
-                grouped, "possible metadata title", normalize_name(track.title), track
-            )
+            _add_group(grouped, "possible metadata title", normalize_name(track.title), track)
 
     duplicate_groups: list[DuplicateGroup] = []
     for (reason, key), group_tracks in grouped.items():
@@ -159,9 +159,7 @@ def group_duplicates(tracks: list[LocalTrack]) -> list[DuplicateGroup]:
 def summarize_scan(
     tracks: list[LocalTrack], duplicate_groups: list[DuplicateGroup]
 ) -> dict[str, int]:
-    safe_copy_paths = {
-        track.path for group in duplicate_groups for track in group.copies
-    }
+    safe_copy_paths = {track.path for group in duplicate_groups for track in group.copies}
     possible_copies = 0
     for group in duplicate_groups:
         if not group.safe_to_move and len(group.tracks) >= 2:
@@ -170,9 +168,7 @@ def summarize_scan(
         "files": len(tracks),
         "duplicate_groups": sum(1 for group in duplicate_groups if group.safe_to_move),
         "duplicate_copies": len(safe_copy_paths),
-        "possible_duplicate_groups": sum(
-            1 for group in duplicate_groups if not group.safe_to_move
-        ),
+        "possible_duplicate_groups": sum(1 for group in duplicate_groups if not group.safe_to_move),
         "possible_duplicate_copies": possible_copies,
         "unique_tracks": max(len(tracks) - len(safe_copy_paths), 0),
     }

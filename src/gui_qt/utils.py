@@ -7,7 +7,6 @@ from typing import Any
 from src.models import DuplicateGroup, LocalTrack
 from src.state import summarize_track_state
 
-
 ANSI_RE = re.compile(r"\x1b\[[0-9;]*[a-zA-Z]")
 
 

@@ -5,7 +5,7 @@ development environment and get started.
 
 ## Prerequisites
 
-- **Python 3.10+**
+- **Python 3.11+**
 - **Git**
 - **FFmpeg** (for audio conversion testing)
 - **spotDL** (the core dependency)
@@ -128,7 +128,7 @@ The project ships with **two** front-ends:
 | App | Entry point | Framework |
 |-----|-------------|-----------|
 | **TUI** (terminal UI) | `python spotify_downloader.py` | [Textual](https://textual.textualize.io/) |
-| **GUI** (desktop UI) | `python gui_app.py` | [CustomTkinter](https://github.com/TomSchimansky/CustomTkinter) |
+| **GUI** (desktop UI) | `python gui_app.py` | [PySide6](https://pyside.org/) (Qt 6) |
 
 Both share the same core logic in `src/`. Changes to `src/` affect both front-ends.
 
@@ -140,7 +140,20 @@ spotify_downloader/
 │   ├── __init__.py
 │   └── write_version_include.py   # Generates installer/_version.iss
 ├── src/
-│   ├── gui/                       # CustomTkinter desktop GUI
+│   ├── gui_qt/                    # Active PySide6 desktop GUI
+│   │   ├── main_window.py         # QMainWindow with sidebar + stacked widget
+│   │   ├── home_panel.py          # Playlist URL and download controls
+│   │   ├── settings_panel.py      # Settings panel
+│   │   ├── history_panel.py       # Download history
+│   │   ├── preview_panel.py       # Local file preview
+│   │   ├── duplicates_panel.py    # Duplicate group display
+│   │   ├── log_panel.py           # Live log output
+│   │   ├── workers.py             # QThread-based spotDL worker
+│   │   ├── tour.py                # Guided onboarding tour
+│   │   ├── theme.py               # Shared theme (colors, fonts)
+│   │   ├── icons.py               # Icon helpers (SVG → QPixmap)
+│   │   └── utils.py               # Formatting helpers
+│   ├── gui/                       # Legacy CustomTkinter GUI (kept for reference)
 │   │   ├── app.py                 # Main GUI application
 │   │   ├── home_frame.py          # Playlist URL and download controls
 │   │   ├── settings_frame.py      # Settings panel
@@ -161,7 +174,7 @@ spotify_downloader/
 ├── installer.iss                  # Inno Setup script for Windows installer
 ├── build.ps1 / build.bat          # Windows EXE build scripts
 ├── requirements.txt
-├── tests/                         # 208 pytest unit tests
+├── tests/                         # 271 pytest unit tests
 └── README.md
 ```
 
@@ -170,8 +183,8 @@ spotify_downloader/
 - **Formatter:** [ruff](https://docs.astral.sh/ruff/) (configured for black-compatible formatting)
 - **Linter:** ruff
 - **Type checker:** [mypy](https://mypy.readthedocs.io/)
-- **Tests:** [pytest](https://docs.pytest.org/) (208 tests, 2 skipped on Windows)
-- **Type hints:** Use Python 3.10+ syntax (`list[str]`, `str | None`, etc.)
+- **Tests:** [pytest](https://docs.pytest.org/) (271 tests, 2 skipped on Windows)
+- **Type hints:** Use Python 3.11+ syntax (`list[str]`, `str | None`, etc.)
 - **Docstrings:** Google-style for public methods and modules
 - **Imports:** Group in order: stdlib, third-party, local. Alphabetical within groups.
 - **Naming:** `snake_case` for functions/variables, `PascalCase` for classes.
@@ -183,13 +196,13 @@ spotify_downloader/
 pip install ruff mypy pytest
 
 # Check for lint issues
-ruff check scripts/ spotify_downloader.py gui_app.py installer.py src/ tests/
+ruff check gui_app.py spotify_downloader.py installer.py src/ tests/
 
 # Auto-fix lint issues
-ruff check --fix scripts/ spotify_downloader.py gui_app.py installer.py src/ tests/
+ruff check --fix gui_app.py spotify_downloader.py installer.py src/ tests/
 
 # Format code
-ruff format scripts/ spotify_downloader.py gui_app.py installer.py src/ tests/
+ruff format gui_app.py spotify_downloader.py installer.py src/ tests/
 
 # Run full test suite
 python -m pytest tests/ -v --tb=short
@@ -201,7 +214,7 @@ python -m mypy scripts/ src/ gui_app.py installer.py --ignore-missing-imports
 ## Testing
 
 This project has a comprehensive pytest suite covering URL validation, proxy handling,
-state persistence, duplicate logic, GUI themes, workers, and more.
+state persistence, duplicate logic, Qt widgets, workers, and more.
 
 ```bash
 # Run all tests
@@ -241,7 +254,7 @@ After running the automated tests, verify the following manually:
    ```
 
 2. **Make your changes** — core logic lives in `src/`, TUI in `spotify_downloader.py`,
-   GUI in `src/gui/`.
+   GUI in `src/gui_qt/`.
 
 3. **Run the linter and formatter:**
    ```bash
@@ -293,7 +306,7 @@ version, edit only `src/__init__.py` and run the build script — no other files
 - Describe what changed and why in the PR description.
 - Include screenshots if you changed UI elements.
 - Ensure `ruff check .` and `ruff format --check .` pass.
-- Ensure all 208 tests pass (`python -m pytest tests/ -v`).
+- Ensure all 271 tests pass (`python -m pytest tests/ -v`).
 - Test on at least one platform before submitting.
 - If your change affects the installer or build scripts, verify `.\build.ps1` succeeds.
 

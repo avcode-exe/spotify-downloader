@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from PySide6.QtGui import QTextCharFormat, QColor, QTextCursor
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QColor, QCursor, QTextCharFormat, QTextCursor
 from PySide6.QtWidgets import (
     QLabel,
     QPlainTextEdit,
@@ -33,6 +34,7 @@ class LogPanel(QWidget):
 
         self._text_edit = QPlainTextEdit()
         self._text_edit.setReadOnly(True)
+        self._text_edit.setCursor(QCursor(Qt.CursorShape.IBeamCursor))
         self._text_edit.setStyleSheet("""
             QPlainTextEdit {
                 background-color: #1A1A1A;
@@ -90,9 +92,7 @@ class LogPanel(QWidget):
             cursor.insertText(line)
 
         self._text_edit.setTextCursor(cursor)
-        self._text_edit.verticalScrollBar().setValue(
-            self._text_edit.verticalScrollBar().maximum()
-        )
+        self._text_edit.verticalScrollBar().setValue(self._text_edit.verticalScrollBar().maximum())
 
     def clear(self) -> None:
         self._text_edit.clear()

@@ -4,13 +4,13 @@ import customtkinter as ctk
 
 from .theme import (
     FONT_SECTION,
+    GAP_CARD_INNER,
+    GAP_ROW,
     SPOTIFY_BORDER_COLOR,
     SPOTIFY_DARK_GRAY,
     SPOTIFY_LIGHT_GRAY,
     SPOTIFY_WHITE,
     frame_kwargs,
-    GAP_CARD_INNER,
-    GAP_ROW,
 )
 
 

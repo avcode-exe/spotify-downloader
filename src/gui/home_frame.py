@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Callable
+from collections.abc import Callable
 
 import customtkinter as ctk
 
@@ -9,6 +9,11 @@ from .theme import (
     FONT_SECTION,
     FONT_SUBTITLE,
     FONT_TITLE,
+    GAP_ACTION,
+    GAP_CARD_INNER,
+    GAP_ROW,
+    GAP_SECTION,
+    PAD_CARD_INNER,
     SPOTIFY_DARK_GRAY,
     SPOTIFY_GREEN,
     SPOTIFY_GREEN_LIGHT,
@@ -19,11 +24,6 @@ from .theme import (
     button_kwargs,
     entry_kwargs,
     frame_kwargs,
-    GAP_ACTION,
-    GAP_CARD_INNER,
-    GAP_ROW,
-    GAP_SECTION,
-    PAD_CARD_INNER,
 )
 
 
@@ -116,9 +116,7 @@ class HomeFrame(ctk.CTkFrame):
             font=FONT_SECTION,
             text_color=SPOTIFY_WHITE,
         )
-        actions_title.pack(
-            anchor="w", padx=PAD_CARD_INNER, pady=(PAD_CARD_INNER, GAP_ACTION)
-        )
+        actions_title.pack(anchor="w", padx=PAD_CARD_INNER, pady=(PAD_CARD_INNER, GAP_ACTION))
 
         # Primary actions row
         primary_row = ctk.CTkFrame(actions_card, fg_color="transparent")
@@ -274,9 +272,7 @@ class HomeFrame(ctk.CTkFrame):
         else:
             self.progress.configure(progress_color=SPOTIFY_GREEN)
 
-    def update_status(
-        self, status: str, track: str = "\u2014", progress: float = 0.0
-    ) -> None:
+    def update_status(self, status: str, track: str = "\u2014", progress: float = 0.0) -> None:
         self.status_var.set(status)
         self.track_var.set(track)
         self.progress.set(progress)

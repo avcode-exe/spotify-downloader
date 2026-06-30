@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import contextlib
 import json
 import os
-from datetime import datetime, timezone
+import threading
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -11,6 +13,7 @@ from .models import TrackStatus
 STATE_FILE = os.path.join(os.path.expanduser("~"), ".spotdl", "track_state.json")
 HISTORY_FILE = os.path.join(os.path.expanduser("~"), ".spotdl", "download_history.json")
 SETTINGS_FILE = os.path.join(os.path.expanduser("~"), ".spotdl", "settings.json")
+_STATE_LOCK = threading.RLock()
 
 
 def ensure_data_dir(path: str) -> None:
@@ -24,10 +27,8 @@ def ensure_data_dir(path: str) -> None:
     if not directory:
         return
     os.makedirs(directory, exist_ok=True)
-    try:
+    with contextlib.suppress(OSError):
         os.chmod(directory, 0o700)
-    except OSError:
-        pass
 
 
 def save_json_secure(path: str, data: object) -> None:
@@ -44,24 +45,20 @@ def save_json_secure(path: str, data: object) -> None:
         with os.fdopen(fd, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
             f.flush()
-            try:
+            with contextlib.suppress(OSError):
                 os.fsync(f.fileno())
-            except OSError:
-                pass
         os.replace(tmp_path, path)
-    except OSError:
+    except (OSError, TypeError, ValueError):
         if os.path.exists(tmp_path):
-            try:
+            with contextlib.suppress(OSError):
                 os.remove(tmp_path)
-            except OSError:
-                pass
         raise
 
 
 def _load_raw() -> list[dict[str, Any]]:
     try:
         if os.path.isfile(STATE_FILE):
-            with open(STATE_FILE, "r", encoding="utf-8") as f:
+            with open(STATE_FILE, encoding="utf-8") as f:
                 data = json.load(f)
             if isinstance(data, list):
                 return data
@@ -92,38 +89,39 @@ def upsert_track_state(
     normalized_key = key.strip().lower()
     if not normalized_key:
         return
-    now = datetime.now(timezone.utc).isoformat()
-    for entry in state:
-        if str(entry.get("key", "")).strip().lower() == normalized_key:
-            entry.update(
-                {
-                    "title": title or entry.get("title"),
-                    "artist": artist or entry.get("artist"),
-                    "status": status,
-                    "path": path or entry.get("path"),
-                    "source": source or entry.get("source"),
-                    "error": error,
-                    "updated_at": now,
-                }
-            )
-            entry.setdefault("first_seen", now)
-            return
-    state.insert(
-        0,
-        {
-            "key": normalized_key,
-            "title": title,
-            "artist": artist,
-            "status": status,
-            "path": path,
-            "source": source,
-            "error": error,
-            "first_seen": now,
-            "updated_at": now,
-        },
-    )
-    if len(state) > 1000:
-        state.pop()
+    now = datetime.now(UTC).isoformat()
+    with _STATE_LOCK:
+        for entry in state:
+            if str(entry.get("key", "")).strip().lower() == normalized_key:
+                entry.update(
+                    {
+                        "title": title or entry.get("title"),
+                        "artist": artist or entry.get("artist"),
+                        "status": status,
+                        "path": path or entry.get("path"),
+                        "source": source or entry.get("source"),
+                        "error": error,
+                        "updated_at": now,
+                    }
+                )
+                entry.setdefault("first_seen", now)
+                return
+        state.insert(
+            0,
+            {
+                "key": normalized_key,
+                "title": title,
+                "artist": artist,
+                "status": status,
+                "path": path,
+                "source": source,
+                "error": error,
+                "first_seen": now,
+                "updated_at": now,
+            },
+        )
+        if len(state) > 1000:
+            state.pop()
 
 
 def summarize_track_state(state: list[dict[str, Any]]) -> dict[str, int]:
@@ -139,45 +137,46 @@ def summarize_track_state(state: list[dict[str, Any]]) -> dict[str, int]:
 
 def update_paths_from_scan(state: list[dict[str, Any]], tracks: list[Any]) -> None:
     index: dict[str, dict[str, Any]] = {}
-    for entry in state:
-        key = str(entry.get("key", "")).strip().lower()
-        if key:
-            index[key] = entry
-    now = datetime.now(timezone.utc).isoformat()
-    for track in tracks:
-        key = (
-            getattr(track, "normalized_name", None)
-            or Path(getattr(track, "filename", "")).stem.lower()
-        )
-        key_str = str(key).strip().lower()
-        existing = index.get(key_str)
-        if existing is not None:
-            current_status = existing.get("status")
-            if current_status in {TrackStatus.FAILED, TrackStatus.QUARANTINED}:
-                continue
-            existing.update(
-                {
-                    "title": getattr(track, "title", None) or existing.get("title"),
-                    "artist": getattr(track, "artist", None) or existing.get("artist"),
+    with _STATE_LOCK:
+        for entry in state:
+            key = str(entry.get("key", "")).strip().lower()
+            if key:
+                index[key] = entry
+        now = datetime.now(UTC).isoformat()
+        for track in tracks:
+            key = (
+                getattr(track, "normalized_name", None)
+                or Path(getattr(track, "filename", "")).stem.lower()
+            )
+            key_str = str(key).strip().lower()
+            existing = index.get(key_str)
+            if existing is not None:
+                current_status = existing.get("status")
+                if current_status in {TrackStatus.FAILED, TrackStatus.QUARANTINED}:
+                    continue
+                existing.update(
+                    {
+                        "title": getattr(track, "title", None) or existing.get("title"),
+                        "artist": getattr(track, "artist", None) or existing.get("artist"),
+                        "status": TrackStatus.DOWNLOADED,
+                        "path": str(track.path),
+                        "source": "local-scan",
+                        "updated_at": now,
+                    }
+                )
+                existing.setdefault("first_seen", now)
+            else:
+                new_entry: dict[str, Any] = {
+                    "key": key_str,
+                    "title": getattr(track, "title", None),
+                    "artist": getattr(track, "artist", None),
                     "status": TrackStatus.DOWNLOADED,
-                    "path": str(getattr(track, "path")),
+                    "path": str(track.path),
                     "source": "local-scan",
+                    "first_seen": now,
                     "updated_at": now,
                 }
-            )
-            existing.setdefault("first_seen", now)
-        else:
-            new_entry: dict[str, Any] = {
-                "key": key_str,
-                "title": getattr(track, "title", None),
-                "artist": getattr(track, "artist", None),
-                "status": TrackStatus.DOWNLOADED,
-                "path": str(getattr(track, "path")),
-                "source": "local-scan",
-                "first_seen": now,
-                "updated_at": now,
-            }
-            state.insert(0, new_entry)
-            index[key_str] = new_entry
-    if len(state) > 1000:
-        state.pop()
+                state.insert(0, new_entry)
+                index[key_str] = new_entry
+        if len(state) > 1000:
+            state.pop()

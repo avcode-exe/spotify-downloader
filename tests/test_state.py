@@ -96,15 +96,9 @@ class TestUpsertTrackState:
         upsert_track_state(empty_state, key="   ", title="Noop", status="downloaded")
         assert len(empty_state) == 0
 
-    def test_key_is_normalized_and_case_insensitive(
-        self, empty_state: list[dict]
-    ) -> None:
-        upsert_track_state(
-            empty_state, key="My-Track", title="Original", status="downloaded"
-        )
-        upsert_track_state(
-            empty_state, key="my-track", title="Updated", status="skipped"
-        )
+    def test_key_is_normalized_and_case_insensitive(self, empty_state: list[dict]) -> None:
+        upsert_track_state(empty_state, key="My-Track", title="Original", status="downloaded")
+        upsert_track_state(empty_state, key="my-track", title="Updated", status="skipped")
         assert len(empty_state) == 1
         assert empty_state[0]["title"] == "Updated"
         assert empty_state[0]["status"] == "skipped"
@@ -197,9 +191,7 @@ class TestUpdatePathsFromScan:
         update_paths_from_scan(sample_state, [])
         assert len(sample_state) == 3
 
-    def test_inserts_new_entry_when_track_not_found(
-        self, empty_state: list[dict]
-    ) -> None:
+    def test_inserts_new_entry_when_track_not_found(self, empty_state: list[dict]) -> None:
         track = type(
             "Track",
             (),
@@ -233,9 +225,7 @@ class TestUpdatePathsFromScan:
 
     def test_key_matching_is_case_insensitive(self, empty_state: list[dict]) -> None:
         track_path = Path("/music/my.mp3")
-        upsert_track_state(
-            empty_state, key="My Song", status="downloaded", title="My Song"
-        )
+        upsert_track_state(empty_state, key="My Song", status="downloaded", title="My Song")
         track = type(
             "Track",
             (),
@@ -252,9 +242,7 @@ class TestUpdatePathsFromScan:
 
 
 class TestSaveTrackState:
-    def test_saves_to_file(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_saves_to_file(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         state_file = tmp_path / "track_state.json"
         monkeypatch.setattr("src.state.STATE_FILE", str(state_file))
         state: list[dict] = [{"key": "x", "status": "downloaded"}]
@@ -281,18 +269,14 @@ class TestSecureJsonWrite:
         save_json_secure(str(target), {"k": "new"})
         assert json.loads(target.read_text(encoding="utf-8")) == {"k": "new"}
 
-    @pytest.mark.skipif(
-        os.name == "nt", reason="POSIX permissions not enforced on Windows"
-    )
+    @pytest.mark.skipif(os.name == "nt", reason="POSIX permissions not enforced on Windows")
     def test_restricts_file_permissions_on_posix(self, tmp_path: Path) -> None:
         target = tmp_path / "secret.json"
         save_json_secure(str(target), {"cookie": "x"})
         mode = target.stat().st_mode & 0o777
         assert mode == 0o600
 
-    @pytest.mark.skipif(
-        os.name == "nt", reason="POSIX permissions not enforced on Windows"
-    )
+    @pytest.mark.skipif(os.name == "nt", reason="POSIX permissions not enforced on Windows")
     def test_ensure_data_dir_restricts_directory_on_posix(self, tmp_path: Path) -> None:
         nested = tmp_path / "sensitive" / "deeper" / "f.json"
         ensure_data_dir(str(nested))

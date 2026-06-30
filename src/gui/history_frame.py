@@ -5,13 +5,13 @@ import customtkinter as ctk
 from .theme import (
     FONT_SECTION,
     FONT_SMALL,
+    GAP_CARD_INNER,
+    GAP_ROW,
     SPOTIFY_BORDER_COLOR,
     SPOTIFY_DARK_GRAY,
     SPOTIFY_LIGHT_GRAY,
     SPOTIFY_WHITE,
     frame_kwargs,
-    GAP_CARD_INNER,
-    GAP_ROW,
 )
 
 
@@ -74,25 +74,19 @@ class HistoryFrame(ctk.CTkFrame):
 
                 # Status indicator color
                 status_tag = status.upper()
-                lines.append(
-                    "  {}  {}  {} track(s)".format(time_str, status_tag, tracks)
-                )
-                lines.append("    {}".format(short_url))
+                lines.append(f"  {time_str}  {status_tag}  {tracks} track(s)")
+                lines.append(f"    {short_url}")
                 folder = entry.get("output_folder", "")
                 if folder:
-                    lines.append("      \u2192 {}".format(folder))
+                    lines.append(f"      \u2192 {folder}")
                 lines.append("")
 
         lines.append("")
         lines.append("Track state:")
-        lines.append(
-            "  downloaded: {}".format(track_state_summary.get("downloaded", 0))
-        )
+        lines.append("  downloaded: {}".format(track_state_summary.get("downloaded", 0)))
         lines.append("  skipped: {}".format(track_state_summary.get("skipped", 0)))
         lines.append("  failed: {}".format(track_state_summary.get("failed", 0)))
-        lines.append(
-            "  quarantined: {}".format(track_state_summary.get("quarantined", 0))
-        )
+        lines.append("  quarantined: {}".format(track_state_summary.get("quarantined", 0)))
 
         self._text.insert("end", "\n".join(lines) + "\n")
         self._text.configure(state="disabled")

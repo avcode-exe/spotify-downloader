@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import os
 import re
@@ -33,10 +34,8 @@ from src.state import (
 
 from .utils import format_download_status, format_elapsed, strip_ansi
 
-
 _RATE_LIMIT_HINT = (
-    "This may be YouTube rate limiting. Try setting a cookie file "
-    "in Settings to reduce failures."
+    "This may be YouTube rate limiting. Try setting a cookie file in Settings to reduce failures."
 )
 _COMPLETE_TIP = "Tip: Some tracks failed. Try updating: pip install -U spotdl yt-dlp"
 _RETRY_HINT = "{failed} track(s) failed. Press Retry Failed to try again."
@@ -75,6 +74,7 @@ class SpotDLWorker(QThread):
         self._retry_urls: list[str] = []
         self._is_retry: bool = False
         self._cancel_requested = False
+        self._cancelled = False
         self._track_state = load_track_state()
         self._track_state_dirty = False
         self._process: asyncio.subprocess.Process | None = None
@@ -87,28 +87,28 @@ class SpotDLWorker(QThread):
         self._url = url
         self._fresh = fresh
         self._is_retry = False
+        self._cancel_requested = False
+        self._cancelled = False
         self._track_state = load_track_state()
         self._track_state_dirty = False
         self._log_buffer.clear()
-        self._cancel_requested = False
         self.start()
 
     def start_retry(self, track_urls: list[str]) -> None:
         self._retry_urls = list(track_urls)
         self._is_retry = True
+        self._cancel_requested = False
+        self._cancelled = False
         self._track_state = load_track_state()
         self._track_state_dirty = False
         self._log_buffer.clear()
-        self._cancel_requested = False
         self.start()
 
     def cancel(self) -> None:
         self._cancel_requested = True
         if self._process is not None:
-            try:
+            with contextlib.suppress(ProcessLookupError):
                 self._process.terminate()
-            except ProcessLookupError:
-                pass
             try:
                 pid = self._process.pid
                 if pid:
@@ -170,11 +170,12 @@ class SpotDLWorker(QThread):
                 )
 
             try:
+                import pathlib
+
+                pathlib.Path(self._output_folder).expanduser().resolve()
                 os.makedirs(self._output_folder, exist_ok=True)
-            except OSError:
-                self.error_emitted.emit(
-                    f"Cannot create output folder: {self._output_folder}"
-                )
+            except (OSError, ValueError):
+                self.error_emitted.emit(f"Cannot create output folder: {self._output_folder}")
                 return
 
             try:
@@ -189,9 +190,7 @@ class SpotDLWorker(QThread):
             if policy not in {"skip", "metadata"}:
                 policy = "skip"
 
-            overwrite = (
-                "force" if self._fresh else ("skip" if policy == "skip" else "metadata")
-            )
+            overwrite = "force" if self._fresh else ("skip" if policy == "skip" else "metadata")
             cmd = build_spotdl_args(
                 spotdl_cmd,
                 [self._url],
@@ -237,11 +236,12 @@ class SpotDLWorker(QThread):
                 )
 
             try:
+                import pathlib
+
+                pathlib.Path(self._output_folder).expanduser().resolve()
                 os.makedirs(self._output_folder, exist_ok=True)
-            except OSError:
-                self.error_emitted.emit(
-                    f"Cannot create output folder: {self._output_folder}"
-                )
+            except (OSError, ValueError):
+                self.error_emitted.emit(f"Cannot create output folder: {self._output_folder}")
                 return
 
             try:
@@ -283,9 +283,7 @@ class SpotDLWorker(QThread):
         finally:
             self._flush_logs()
 
-    def _run_spotdl(
-        self, cmd: list[str], url: str = "", output_folder: str = ""
-    ) -> None:
+    def _run_spotdl(self, cmd: list[str], url: str = "", output_folder: str = "") -> None:
         downloaded = 0
         skipped = 0
         failed = 0
@@ -316,6 +314,7 @@ class SpotDLWorker(QThread):
             assert proc.stdout is not None
             while True:
                 if self._cancel_requested:
+                    self._cancelled = True
                     break
                 raw = loop.run_until_complete(proc.stdout.readline())
                 if not raw:
@@ -363,9 +362,7 @@ class SpotDLWorker(QThread):
                     if pending_done:
                         pending_done = False
                         elapsed = time.monotonic() - start_time
-                        status_text = format_download_status(
-                            downloaded + skipped, total, elapsed
-                        )
+                        status_text = format_download_status(downloaded + skipped, total, elapsed)
                         self.status_emitted.emit(
                             {
                                 "status": status_text,
@@ -413,81 +410,82 @@ class SpotDLWorker(QThread):
                     else:
                         self._emit_log(text)
 
-            return_code = loop.run_until_complete(proc.wait())
-            elapsed_final = time.monotonic() - start_time
-
-            if return_code == 0:
+            if self._cancelled:
                 self.status_emitted.emit(
                     {
-                        "status": f"Complete! ({format_elapsed(elapsed_final)})",
-                        "track": "\u2014",
-                        "progress": 1.0,
-                    }
-                )
-                summary_parts = []
-                if downloaded > 0:
-                    summary_parts.append(f"{downloaded} new download(s)")
-                if skipped > 0:
-                    summary_parts.append(f"{skipped} duplicate skip(s)")
-                if failed > 0:
-                    summary_parts.append(f"{failed} failed")
-                summary = ", ".join(summary_parts) if summary_parts else "nothing to do"
-                self.log_emitted.emit(
-                    f"Complete! {summary} in {format_elapsed(elapsed_final)}\n"
-                    f"   Files saved to: {output_folder}"
-                )
-                if failed > 0:
-                    self._emit_log(_COMPLETE_TIP)
-                if url:
-                    self.history_emitted.emit(
-                        {
-                            "url": url,
-                            "output_folder": output_folder,
-                            "tracks_downloaded": downloaded + skipped,
-                            "status": "completed",
-                        }
-                    )
-                if failed > 0:
-                    self._emit_log(_RETRY_HINT.format(failed=failed))
-            else:
-                self.status_emitted.emit(
-                    {
-                        "status": f"Failed (exit {return_code})",
+                        "status": "Cancelled",
                         "track": "\u2014",
                         "progress": 0.0,
                     }
                 )
-                self._emit_log(f"spotDL exited with code {return_code}")
-                if failed > 0:
-                    self._emit_log(f"{failed} track(s) failed to download")
                 if url:
                     self.history_emitted.emit(
                         {
                             "url": url,
                             "output_folder": output_folder,
                             "tracks_downloaded": downloaded + skipped,
-                            "status": "failed",
+                            "status": "cancelled",
                         }
                     )
-                if failed > 0:
-                    self._emit_log(_RETRY_HINT.format(failed=failed))
-        except asyncio.CancelledError:
-            self.status_emitted.emit(
-                {
-                    "status": "Cancelled",
-                    "track": "\u2014",
-                    "progress": 0.0,
-                }
-            )
-            if url:
-                self.history_emitted.emit(
-                    {
-                        "url": url,
-                        "output_folder": output_folder,
-                        "tracks_downloaded": downloaded + skipped,
-                        "status": "cancelled",
-                    }
-                )
+            else:
+                return_code = loop.run_until_complete(proc.wait())
+                elapsed_final = time.monotonic() - start_time
+
+                if return_code == 0:
+                    self.status_emitted.emit(
+                        {
+                            "status": f"Complete! ({format_elapsed(elapsed_final)})",
+                            "track": "\u2014",
+                            "progress": 1.0,
+                        }
+                    )
+                    summary_parts = []
+                    if downloaded > 0:
+                        summary_parts.append(f"{downloaded} new download(s)")
+                    if skipped > 0:
+                        summary_parts.append(f"{skipped} duplicate skip(s)")
+                    if failed > 0:
+                        summary_parts.append(f"{failed} failed")
+                    summary = ", ".join(summary_parts) if summary_parts else "nothing to do"
+                    self.log_emitted.emit(
+                        f"Complete! {summary} in {format_elapsed(elapsed_final)}\n"
+                        f"   Files saved to: {output_folder}"
+                    )
+                    if failed > 0:
+                        self._emit_log(_COMPLETE_TIP)
+                    if url:
+                        self.history_emitted.emit(
+                            {
+                                "url": url,
+                                "output_folder": output_folder,
+                                "tracks_downloaded": downloaded + skipped,
+                                "status": "completed",
+                            }
+                        )
+                    if failed > 0:
+                        self._emit_log(_RETRY_HINT.format(failed=failed))
+                else:
+                    self.status_emitted.emit(
+                        {
+                            "status": f"Failed (exit {return_code})",
+                            "track": "\u2014",
+                            "progress": 0.0,
+                        }
+                    )
+                    self._emit_log(f"spotDL exited with code {return_code}")
+                    if failed > 0:
+                        self._emit_log(f"{failed} track(s) failed to download")
+                    if url:
+                        self.history_emitted.emit(
+                            {
+                                "url": url,
+                                "output_folder": output_folder,
+                                "tracks_downloaded": downloaded + skipped,
+                                "status": "failed",
+                            }
+                        )
+                    if failed > 0:
+                        self._emit_log(_RETRY_HINT.format(failed=failed))
         except Exception as exc:
             self.error_emitted.emit(str(exc))
         finally:
@@ -523,14 +521,14 @@ class SpotDLWorker(QThread):
                     path=str(match.path),
                     source="local-scan",
                 )
-        except Exception:
-            pass
+        except (KeyError, AttributeError, TypeError) as exc:
+            logging.getLogger(__name__).warning(
+                "Track state update failed for %r: %s", track_name, exc
+            )
 
     def _record_failed_track(self, text: str) -> None:
         self._track_state_dirty = True
-        track_url_m = re.search(
-            r"(https?://open\.spotify\.com/track/[A-Za-z0-9]+)", text
-        )
+        track_url_m = re.search(r"(https?://open\.spotify\.com/track/[A-Za-z0-9]+)", text)
         if track_url_m:
             track_url = track_url_m.group(1)
             self.failed_emitted.emit(track_url)

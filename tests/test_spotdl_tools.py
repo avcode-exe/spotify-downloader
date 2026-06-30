@@ -22,9 +22,7 @@ class TestFindSpotdl:
         result = find_spotdl()
         assert result == ["/usr/bin/spotdl"]
 
-    def test_returns_fallback_when_not_found(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_returns_fallback_when_not_found(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr("shutil.which", lambda name: None)
         result = find_spotdl()
         assert result == [sys.executable, "-m", "spotdl"]
@@ -146,9 +144,7 @@ class TestBuildSpotdlArgs:
         assert cmd[-1] == "url2"
 
     def test_extra_args_before_urls(self) -> None:
-        cmd = build_spotdl_args(
-            ["spotdl"], ["url"], "/out", {}, extra_args=["--threads", "2"]
-        )
+        cmd = build_spotdl_args(["spotdl"], ["url"], "/out", {}, extra_args=["--threads", "2"])
         url_idx = cmd.index("url")
         extra_idx = cmd.index("--threads")
         assert extra_idx < url_idx
@@ -176,9 +172,7 @@ class TestBuildSpotdlArgs:
 
 
 class TestEnsureDeno:
-    def test_returns_true_when_deno_on_path(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_returns_true_when_deno_on_path(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr("shutil.which", lambda name: "/usr/bin/deno")
         assert asyncio.run(ensure_deno(["spotdl"])) is True
 
@@ -212,9 +206,7 @@ class TestEnsureDeno:
         async def fake_create_subprocess_exec(*args: str, **kwargs: Any) -> _FakeProc:
             return _FakeProc(returncode=1, stdout=b"")
 
-        with patch(
-            "asyncio.create_subprocess_exec", side_effect=fake_create_subprocess_exec
-        ):
+        with patch("asyncio.create_subprocess_exec", side_effect=fake_create_subprocess_exec):
             # Deno install failed -> False (was previously always True, a bug).
             assert asyncio.run(ensure_deno(["spotdl"])) is False
 
@@ -233,9 +225,7 @@ class TestEnsureDeno:
         async def failing_create_subprocess_exec(*args: str, **kwargs: Any) -> None:
             raise OSError("permission denied")
 
-        with patch(
-            "asyncio.create_subprocess_exec", side_effect=failing_create_subprocess_exec
-        ):
+        with patch("asyncio.create_subprocess_exec", side_effect=failing_create_subprocess_exec):
             assert asyncio.run(ensure_deno(["spotdl"])) is False
 
 

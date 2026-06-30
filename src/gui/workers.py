@@ -1,15 +1,17 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import os
 import re
 import signal
 import subprocess
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from threading import Thread
-from typing import Any, Callable
+from typing import Any
 
 from src.manifest import normalize_name, scan_output_folder
 from src.models import TrackStatus
@@ -33,8 +35,7 @@ from src.state import (
 from .utils import format_download_status, format_elapsed, strip_ansi
 
 _RATE_LIMIT_HINT = (
-    "This may be YouTube rate limiting. Try setting a cookie file "
-    "in Settings to reduce failures."
+    "This may be YouTube rate limiting. Try setting a cookie file in Settings to reduce failures."
 )
 _COMPLETE_TIP = "Tip: Some tracks failed. Try updating: pip install -U spotdl yt-dlp"
 _RETRY_HINT = "{failed} track(s) failed. Press 🔄 Retry Failed to try again."
@@ -85,10 +86,8 @@ class SpotDLWorker:
     def cancel(self) -> None:
         self._cancel_requested = True
         if self._process is not None:
-            try:
+            with contextlib.suppress(ProcessLookupError):
                 self._process.terminate()
-            except ProcessLookupError:
-                pass
             try:
                 pid = self._process.pid
                 if pid:
@@ -130,9 +129,7 @@ class SpotDLWorker:
     def _run_download(self, url: str, fresh: bool) -> None:
         try:
             self._log_buffer.append(f"▶ Starting download: {url}")
-            self._emit(
-                "status", {"status": "Downloading…", "track": "—", "progress": 0.0}
-            )
+            self._emit("status", {"status": "Downloading…", "track": "—", "progress": 0.0})
 
             spotdl_cmd = find_spotdl()
             spotdl_ok, deno_ok = asyncio.run(validate_and_ensure_deno(spotdl_cmd))
@@ -147,13 +144,13 @@ class SpotDLWorker:
                 )
 
             try:
-                os.makedirs(self._output_folder, exist_ok=True)
-            except OSError:
-                self._emit(
-                    "error", error=f"Cannot create output folder: {self._output_folder}"
-                )
-                return
+                import pathlib
 
+                pathlib.Path(self._output_folder).expanduser().resolve()
+                os.makedirs(self._output_folder, exist_ok=True)
+            except (OSError, ValueError):
+                self._emit("error", error=f"Cannot create output folder: {self._output_folder}")
+                return
             try:
                 self._last_scan = scan_output_folder(self._output_folder)
                 self._scan_index = {t.normalized_name: t for t in self._last_scan}
@@ -166,9 +163,7 @@ class SpotDLWorker:
             if policy not in {"skip", "metadata"}:
                 policy = "skip"
 
-            overwrite = (
-                "force" if fresh else ("skip" if policy == "skip" else "metadata")
-            )
+            overwrite = "force" if fresh else ("skip" if policy == "skip" else "metadata")
             cmd = build_spotdl_args(
                 spotdl_cmd,
                 [url],
@@ -206,11 +201,12 @@ class SpotDLWorker:
                 )
 
             try:
+                import pathlib
+
+                pathlib.Path(self._output_folder).expanduser().resolve()
                 os.makedirs(self._output_folder, exist_ok=True)
-            except OSError:
-                self._emit(
-                    "error", error=f"Cannot create output folder: {self._output_folder}"
-                )
+            except (OSError, ValueError):
+                self._emit("error", error=f"Cannot create output folder: {self._output_folder}")
                 return
             try:
                 self._last_scan = scan_output_folder(self._output_folder)
@@ -221,9 +217,7 @@ class SpotDLWorker:
                 )
             if not track_urls:
                 self._log_buffer.append("No failed tracks to retry.")
-                self._emit(
-                    "done", data={"url": "", "output_folder": self._output_folder}
-                )
+                self._emit("done", data={"url": "", "output_folder": self._output_folder})
                 return
 
             cmd = build_spotdl_args(
@@ -242,9 +236,7 @@ class SpotDLWorker:
         finally:
             self._flush_logs()
 
-    def _run_spotdl(
-        self, cmd: list[str], url: str = "", output_folder: str = ""
-    ) -> None:
+    def _run_spotdl(self, cmd: list[str], url: str = "", output_folder: str = "") -> None:
         downloaded = 0
         skipped = 0
         failed = 0
@@ -322,9 +314,7 @@ class SpotDLWorker:
                     if pending_done:
                         pending_done = False
                         elapsed = time.monotonic() - start_time
-                        status_text = format_download_status(
-                            downloaded + skipped, total, elapsed
-                        )
+                        status_text = format_download_status(downloaded + skipped, total, elapsed)
                         self._emit(
                             "status",
                             {
@@ -493,14 +483,14 @@ class SpotDLWorker:
                     path=str(match.path),
                     source="local-scan",
                 )
-        except Exception:
-            pass
+        except (KeyError, AttributeError, TypeError) as exc:
+            logging.getLogger(__name__).warning(
+                "Track state update failed for %r: %s", track_name, exc
+            )
 
     def _record_failed_track(self, text: str) -> None:
         self._track_state_dirty = True
-        track_url_m = re.search(
-            r"(https?://open\.spotify\.com/track/[A-Za-z0-9]+)", text
-        )
+        track_url_m = re.search(r"(https?://open\.spotify\.com/track/[A-Za-z0-9]+)", text)
         if track_url_m:
             track_url = track_url_m.group(1)
             # Surface the retryable URL to the controller so it can offer a

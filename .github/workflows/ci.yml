@@ -123,3 +123,20 @@ jobs:
 
       - name: Verify installer module loads
         run: python -c "import installer; print('Installer module loaded OK')"
+
+  security:
+    name: Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies and pip-audit
+        run: pip install -r requirements.txt pip-audit
+
+      - name: Audit dependencies
+        run: pip-audit --requirement requirements.txt

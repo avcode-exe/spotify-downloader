@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QCursor
 from PySide6.QtWidgets import (
     QHeaderView,
     QLabel,
@@ -35,6 +36,7 @@ class DuplicatesPanel(QWidget):
         layout.addWidget(title)
 
         self._tree = QTreeWidget()
+        self._tree.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self._tree.setHeaderLabels(["Reason", "Key", "Action", "File"])
         self._tree.setColumnWidth(0, 180)
         self._tree.setColumnWidth(1, 200)
@@ -76,9 +78,7 @@ class DuplicatesPanel(QWidget):
         for group in duplicate_groups:
             keep = group.keep
             action = "Move" if group.safe_to_move else "Review"
-            action_color = (
-                Qt.GlobalColor.green if group.safe_to_move else Qt.GlobalColor.yellow
-            )
+            action_color = Qt.GlobalColor.green if group.safe_to_move else Qt.GlobalColor.yellow
 
             # Group header
             group_item = QTreeWidgetItem(self._tree)

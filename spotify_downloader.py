@@ -18,7 +18,7 @@ import subprocess
 import sys
 import time
 import urllib.request
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from logging.handlers import RotatingFileHandler
 from typing import Any
 
@@ -35,8 +35,7 @@ from src.manifest import (
     scan_output_folder,
     summarize_scan,
 )
-from src.models import DUPLICATE_POLICY_OPTIONS, LocalTrack, TrackStatus
-from src.spotdl_tools import is_valid_spotify_url
+from src.models import DUPLICATE_POLICY_OPTIONS, LocalTrack, TrackStatus, redact_settings_for_log
 from src.spotdl_tools import (
     DONE_RE,
     DOWNLOADING_RE,
@@ -47,6 +46,7 @@ from src.spotdl_tools import (
     ensure_deno,
     find_spotdl,
     is_rate_limit_error,
+    is_valid_spotify_url,
     validate_spotdl,
 )
 from src.state import (
@@ -61,7 +61,25 @@ from src.state import (
     update_paths_from_scan,
     upsert_track_state,
 )
-from src.models import redact_settings_for_log
+
+
+def _sanitize_proxy(proxy: str) -> str:
+    """Strip credentials from a proxy URL for safe logging/display."""
+    import re
+
+    m = re.match(r"^(https?://)([^:@]+):([^@]+)@(.+)$", proxy)
+    if m:
+        return f"{m.group(1)}****:****@{m.group(4)}"
+    return proxy
+
+
+def _validate_output_folder(raw: str) -> str:
+    import pathlib
+
+    p = pathlib.Path(raw).expanduser().resolve()
+    if str(p) in ("", ".", "/"):
+        raise ValueError("Output folder is empty or root")
+    return str(p)
 
 
 LOG_DIR = os.path.join(os.path.expanduser("~"), ".spotdl")
@@ -702,9 +720,7 @@ class SpotifyDownloader(App):
         self._history: list[dict] = self._load_history()
         self._track_state: list[dict] = load_track_state()
         self._failed_tracks = [
-            e["key"]
-            for e in self._track_state
-            if e.get("status") == TrackStatus.FAILED
+            e["key"] for e in self._track_state if e.get("status") == TrackStatus.FAILED
         ]
         self._duplicate_groups: list[Any] = []
         self._last_scan: list[LocalTrack] = []
@@ -713,7 +729,7 @@ class SpotifyDownloader(App):
         log.info(
             "App initialized | history=%d settings=%s track_state=%s",
             len(self._history),
-            self._settings,
+            redact_settings_for_log(self._settings),
             len(self._track_state),
         )
 
@@ -733,39 +749,31 @@ class SpotifyDownloader(App):
                     id="url-input",
                 )
                 yield Label("Output folder:", classes="input-label")
-                yield Input(
-                    placeholder="./downloads", value="./downloads", id="output-input"
-                )
+                yield Input(placeholder="./downloads", value="./downloads", id="output-input")
 
             with Horizontal(classes="groups-row"):
-                with Container(classes="button-group"):
-                    with Horizontal():
-                        yield Button(
-                            "▶  Download", id="download-btn", variant="success"
-                        )
-                        yield Button("⟳  Fresh", id="fresh-btn")
-                        yield Button("🔄 Retry Failed", id="retry-btn", disabled=True)
-                with Container(classes="button-group"):
-                    with Horizontal():
-                        yield Button("🔎 Preview", id="preview-btn")
-                        yield Button("📋 Duplicates", id="duplicates-btn")
-                        yield Button("🧹 Clean", id="clean-btn")
+                with Container(classes="button-group"), Horizontal():
+                    yield Button("▶  Download", id="download-btn", variant="success")
+                    yield Button("⟳  Fresh", id="fresh-btn")
+                    yield Button("🔄 Retry Failed", id="retry-btn", disabled=True)
+                with Container(classes="button-group"), Horizontal():
+                    yield Button("🔎 Preview", id="preview-btn")
+                    yield Button("📋 Duplicates", id="duplicates-btn")
+                    yield Button("🧹 Clean", id="clean-btn")
 
             with Horizontal(classes="groups-row"):
-                with Container(classes="button-group"):
-                    with Horizontal():
-                        yield Button("📜 History", id="history-btn")
-                        yield Button("⚙ Settings", id="settings-btn")
-                        yield Button("🗑  Clear History & Log", id="clear-history-btn")
-                with Container(classes="button-group"):
-                    with Horizontal():
-                        yield Button(
-                            "⏹  Cancel",
-                            id="cancel-btn",
-                            variant="error",
-                            disabled=True,
-                        )
-                        yield Button("✕  Quit", id="quit-btn")
+                with Container(classes="button-group"), Horizontal():
+                    yield Button("📜 History", id="history-btn")
+                    yield Button("⚙ Settings", id="settings-btn")
+                    yield Button("🗑  Clear History & Log", id="clear-history-btn")
+                with Container(classes="button-group"), Horizontal():
+                    yield Button(
+                        "⏹  Cancel",
+                        id="cancel-btn",
+                        variant="error",
+                        disabled=True,
+                    )
+                    yield Button("✕  Quit", id="quit-btn")
 
             with Container(id="settings-section"):
                 yield Label("⚙  Settings", id="settings-header")
@@ -855,9 +863,7 @@ class SpotifyDownloader(App):
                     yield Label("Track:", classes="stat-label")
                     yield Label("—", id="track-value", classes="stat-value")
 
-            yield RichLog(
-                id="log", highlight=True, markup=True, max_lines=200, auto_scroll=False
-            )
+            yield RichLog(id="log", highlight=True, markup=True, max_lines=200, auto_scroll=False)
 
     def on_mount(self) -> None:
         log.info("App mounted — UI widgets ready")
@@ -881,12 +887,10 @@ class SpotifyDownloader(App):
         settings = dict(DEFAULT_SETTINGS)
         try:
             if os.path.isfile(SETTINGS_FILE):
-                with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
+                with open(SETTINGS_FILE, encoding="utf-8") as f:
                     saved = json.load(f)
                 if isinstance(saved, dict):
-                    settings.update(
-                        {k: str(v) for k, v in saved.items() if k in DEFAULT_SETTINGS}
-                    )
+                    settings.update({k: str(v) for k, v in saved.items() if k in DEFAULT_SETTINGS})
                     log.info(
                         "Settings loaded | file=%s settings=%s",
                         SETTINGS_FILE,
@@ -929,9 +933,7 @@ class SpotifyDownloader(App):
             self.query_one("#duplicate-policy-select", Select).value = duplicate_policy
             self.query_one("#proxy-input", Input).value = proxy
             self.query_one("#cookie-file-input", Input).value = cookie_file
-            self.query_one("#browser-select", Select).value = self._settings.get(
-                "browser", "auto"
-            )
+            self.query_one("#browser-select", Select).value = self._settings.get("browser", "auto")
             self._update_settings_status()
             log.debug("Settings applied to UI | format=%s bitrate=%s", fmt, bitrate)
         finally:
@@ -947,9 +949,7 @@ class SpotifyDownloader(App):
         if duplicate_policy not in dict(DUPLICATE_POLICY_OPTIONS):
             duplicate_policy = "skip"
         provider_label = audio_provider.replace("-", " ").title()
-        policy_label = dict(DUPLICATE_POLICY_OPTIONS).get(
-            duplicate_policy, duplicate_policy
-        )
+        policy_label = dict(DUPLICATE_POLICY_OPTIONS).get(duplicate_policy, duplicate_policy)
         parts = [
             f"Format: {fmt.upper()}",
             f"Bitrate: {bitrate}",
@@ -957,7 +957,7 @@ class SpotifyDownloader(App):
             f"Duplicate: {policy_label}",
         ]
         if proxy:
-            parts.append(f"Proxy: {proxy}")
+            parts.append(f"Proxy: {_sanitize_proxy(proxy)}")
         browser = self._settings.get("browser", "auto")
         browser_label = "Auto" if browser == "auto" else browser.title()
         if cookie_file:
@@ -1025,7 +1025,7 @@ class SpotifyDownloader(App):
             self._log(
                 "[bold yellow]⚠[/] Proxy must start with http://, https://, socks4://, or socks5://"
             )
-            log.warning("Invalid proxy format | proxy=%s", proxy)
+            log.warning("Invalid proxy format | proxy=%s", _sanitize_proxy(proxy))
             return
         self._settings["proxy"] = proxy
         self._save_settings()
@@ -1035,9 +1035,7 @@ class SpotifyDownloader(App):
     def on_cookie_file_submitted(self, event: Input.Submitted) -> None:
         cookie_file = event.value.strip()
         if cookie_file and not os.path.isfile(cookie_file):
-            self._log(
-                f"[bold yellow]⚠[/] Cookie file not found: [bold]{cookie_file}[/]"
-            )
+            self._log(f"[bold yellow]⚠[/] Cookie file not found: [bold]{cookie_file}[/]")
             log.warning("Cookie file not found | path=%s", cookie_file)
         self._settings["cookie_file"] = cookie_file
         self._save_settings()
@@ -1089,9 +1087,7 @@ class SpotifyDownloader(App):
             log.error("yt-dlp not found for cookie extraction")
             return
         self.query_one("#extract-cookies-btn", Button).disabled = True
-        log.info(
-            "Extracting cookies | browser=%s output=%s", chosen_browser, cookie_path
-        )
+        log.info("Extracting cookies | browser=%s output=%s", chosen_browser, cookie_path)
         try:
             # Tighten the cookie directory to owner-only; the file written here
             # is an authenticated YouTube/Google session, so default permissions
@@ -1146,10 +1142,7 @@ class SpotifyDownloader(App):
                     )
                     return
                 output_lower = output.lower() if output else ""
-                is_locked = (
-                    "could not copy" in output_lower
-                    or "permission denied" in output_lower
-                )
+                is_locked = "could not copy" in output_lower or "permission denied" in output_lower
                 log.debug(
                     "Browser extraction failed | browser=%s locked=%s output=%s",
                     browser,
@@ -1172,9 +1165,7 @@ class SpotifyDownloader(App):
         output: str,
     ) -> None:
         output_lower = output.lower() if output else ""
-        is_locked = (
-            "could not copy" in output_lower or "permission denied" in output_lower
-        )
+        is_locked = "could not copy" in output_lower or "permission denied" in output_lower
         if is_locked:
             tried_names = ", ".join(b.title() for b in browsers_tried)
             self._log(
@@ -1215,9 +1206,7 @@ class SpotifyDownloader(App):
         try:
             req = urllib.request.Request(url, headers={"Accept": "application/json"})
             loop = asyncio.get_running_loop()
-            resp = await loop.run_in_executor(
-                None, lambda: urllib.request.urlopen(req, timeout=8)
-            )
+            resp = await loop.run_in_executor(None, lambda: urllib.request.urlopen(req, timeout=8))
             with resp:
                 data = json.loads(resp.read().decode())
             return data["info"]["version"]
@@ -1231,9 +1220,8 @@ class SpotifyDownloader(App):
             from packaging.version import Version
 
             return Version(a) > Version(b)
-        except Exception:
-            pass
-        return False
+        except (ImportError, Exception):
+            return False
 
     async def _check_dependency_updates(self) -> None:
         updates: list[str] = []
@@ -1280,12 +1268,10 @@ class SpotifyDownloader(App):
     def _load_history() -> list[dict]:
         try:
             if os.path.isfile(HISTORY_FILE):
-                with open(HISTORY_FILE, "r", encoding="utf-8") as f:
+                with open(HISTORY_FILE, encoding="utf-8") as f:
                     data = json.load(f)
                 if isinstance(data, list):
-                    log.info(
-                        "History loaded | entries=%d file=%s", len(data), HISTORY_FILE
-                    )
+                    log.info("History loaded | entries=%d file=%s", len(data), HISTORY_FILE)
                     return data
                 log.warning("History file has unexpected format, ignoring")
         except (json.JSONDecodeError, OSError) as exc:
@@ -1295,9 +1281,7 @@ class SpotifyDownloader(App):
     def _save_history(self) -> None:
         try:
             save_json_secure(HISTORY_FILE, self._history)
-            log.debug(
-                "History saved | entries=%d file=%s", len(self._history), HISTORY_FILE
-            )
+            log.debug("History saved | entries=%d file=%s", len(self._history), HISTORY_FILE)
         except OSError as exc:
             log.error("Could not save history | error=%s", exc)
             self._log(f"[bold red]✗[/] Could not save history: {exc}")
@@ -1310,7 +1294,7 @@ class SpotifyDownloader(App):
             "output_folder": output_folder,
             "tracks_downloaded": tracks_downloaded,
             "status": status,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         }
         self._history.insert(0, entry)
         self._history = self._history[:100]
@@ -1346,11 +1330,7 @@ class SpotifyDownloader(App):
             status = entry.get("status", "unknown")
             folder = entry.get("output_folder", "")
             status_color = (
-                "green"
-                if status == "completed"
-                else "red"
-                if status == "failed"
-                else "yellow"
+                "green" if status == "completed" else "red" if status == "failed" else "yellow"
             )
             self._history_widget.write(
                 f"[dim]{time_str}[/]  "
@@ -1395,7 +1375,7 @@ class SpotifyDownloader(App):
                 log.info("Terminated spotDL process | pid=%d", self._process.pid)
                 try:
                     await asyncio.wait_for(self._process.wait(), timeout=5.0)
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     log.warning(
                         "spotDL process did not exit after terminate, killing | pid=%d",
                         self._process.pid,
@@ -1447,9 +1427,7 @@ class SpotifyDownloader(App):
             extra_args=extra_args,
         )
 
-    def _record_completed_track(
-        self, track_name: str, output_folder: str, status: str
-    ) -> None:
+    def _record_completed_track(self, track_name: str, output_folder: str, status: str) -> None:
         key = normalize_name(track_name)
         upsert_track_state(
             self._track_state,
@@ -1471,13 +1449,11 @@ class SpotifyDownloader(App):
                     path=str(match.path),
                     source="local-scan",
                 )
-        except Exception:
-            pass
+        except (KeyError, AttributeError, TypeError) as exc:
+            log.warning("Could not update track state for %r: %s", track_name, exc)
 
     def _record_failed_track(self, text: str, output_folder: str) -> None:
-        track_url_m = re.search(
-            r"(https?://open\.spotify\.com/track/[A-Za-z0-9]+)", text
-        )
+        track_url_m = re.search(r"(https?://open\.spotify\.com/track/[A-Za-z0-9]+)", text)
         if track_url_m:
             track_url = track_url_m.group(1)
             if track_url not in self._failed_tracks:
@@ -1526,7 +1502,13 @@ class SpotifyDownloader(App):
         self._download_start_time = time.monotonic()
         self._track_timestamps.clear()
 
-        log.info("spotDL subprocess starting | cmd=%s", " ".join(cmd))
+        safe_cmd = [
+            _sanitize_proxy(arg)
+            if arg.startswith(("http://", "https://", "socks4://", "socks5://"))
+            else arg
+            for arg in cmd
+        ]
+        log.info("spotDL subprocess starting | cmd=%s", " ".join(safe_cmd))
         try:
             sub_env = dict(os.environ)
             sub_env["PYTHONIOENCODING"] = "utf-8"
@@ -1537,7 +1519,10 @@ class SpotifyDownloader(App):
                 stderr=asyncio.subprocess.STDOUT,
                 env=sub_env,
             )
-            assert self._process.stdout is not None
+            if self._process.stdout is None:
+                self._log("[bold red]✗[/] Cannot capture spotDL output — aborting download.")
+                self._unlock_ui()
+                return
             log.info("spotDL process launched | pid=%d", self._process.pid)
 
             async for raw in self._process.stdout:
@@ -1566,9 +1551,7 @@ class SpotifyDownloader(App):
                         pending_done = True
                         self._track_timestamps.append(time.monotonic())
                         self._track_label.update(track_name)
-                        self._record_completed_track(
-                            track_name, output_folder, TrackStatus.SKIPPED
-                        )
+                        self._record_completed_track(track_name, output_folder, TrackStatus.SKIPPED)
                         self._log(f"[dim]⏭  Skipped (duplicate): {track_name}[/]")
                         log.info(
                             "Track skipped (duplicate) | track=%s skipped=%d total=%d",
@@ -1600,14 +1583,10 @@ class SpotifyDownloader(App):
                         continue
                     if pending_done:
                         pending_done = False
-                        status_text = self._format_download_status(
-                            downloaded + skipped, total
-                        )
+                        status_text = self._format_download_status(downloaded + skipped, total)
                         self._status_label.update(status_text)
                         if total > 0:
-                            self._progress_bar.progress = min(
-                                downloaded + skipped, total
-                            )
+                            self._progress_bar.progress = min(downloaded + skipped, total)
                     m = FOUND_RE.search(text)
                     if m:
                         self._in_traceback = False
@@ -1635,9 +1614,7 @@ class SpotifyDownloader(App):
                         failed += 1
                         self._record_failed_track(text, output_folder)
                         self._log(f"[bold red]✗ {text}[/]")
-                        if not self._rate_limit_hint_shown and is_rate_limit_error(
-                            text
-                        ):
+                        if not self._rate_limit_hint_shown and is_rate_limit_error(text):
                             self._rate_limit_hint_shown = True
                             self._log(
                                 "   [dim]This may be YouTube rate limiting. "
@@ -1674,9 +1651,7 @@ class SpotifyDownloader(App):
                 elapsed_final,
             )
             if rc == 0:
-                self._status_label.update(
-                    f"Complete! ({self._format_elapsed(elapsed_final)})"
-                )
+                self._status_label.update(f"Complete! ({self._format_elapsed(elapsed_final)})")
                 self._track_label.update("—")
                 if total > 0:
                     self._progress_bar.progress = total
@@ -1711,9 +1686,7 @@ class SpotifyDownloader(App):
                     output_path,
                 )
                 if url:
-                    self._append_history(
-                        url, output_folder, downloaded + skipped, "completed"
-                    )
+                    self._append_history(url, output_folder, downloaded + skipped, "completed")
                 if self._failed_tracks:
                     self._log(
                         f"   [dim]{len(self._failed_tracks)} track(s) failed. Press [bold orange1]Retry Failed[/] to try again.[/]"
@@ -1731,9 +1704,7 @@ class SpotifyDownloader(App):
                     failed,
                 )
                 if url:
-                    self._append_history(
-                        url, output_folder, downloaded + skipped, "failed"
-                    )
+                    self._append_history(url, output_folder, downloaded + skipped, "failed")
                 if self._failed_tracks:
                     self._log(
                         f"   [dim]{len(self._failed_tracks)} track(s) failed. Press [bold orange1]Retry Failed[/] to try again.[/]"
@@ -1747,9 +1718,7 @@ class SpotifyDownloader(App):
             )
             self._status_label.update("Cancelled")
             if url:
-                self._append_history(
-                    url, output_folder, downloaded + skipped, "cancelled"
-                )
+                self._append_history(url, output_folder, downloaded + skipped, "cancelled")
         except Exception as exc:
             log.error("Unexpected error in _run_spotdl | error=%s", exc, exc_info=True)
             self._status_label.update("Error")
@@ -1848,17 +1817,16 @@ class SpotifyDownloader(App):
         self._scan_index = {t.normalized_name: t for t in self._last_scan}
         self._duplicate_groups = group_duplicates(self._last_scan)
         self._duplicate_groups = [
-            group
-            for group in self._duplicate_groups
-            if group.safe_to_move and group.copies
+            group for group in self._duplicate_groups if group.safe_to_move and group.copies
         ]
         if not self._duplicate_groups:
             self._log("[dim]No safe duplicate copies to move.[/]")
             return
-        count, destination = quarantine_duplicate_copies(self._duplicate_groups, out)
+        count, destination, moved_names = quarantine_duplicate_copies(self._duplicate_groups, out)
+        moved_set = set(moved_names)
         for group in self._duplicate_groups:
             for track in group.copies:
-                if not track.path.exists():
+                if track.normalized_name not in moved_set:
                     continue
                 upsert_track_state(
                     self._track_state,
@@ -1897,6 +1865,12 @@ class SpotifyDownloader(App):
             log.warning("Invalid URL entered | url=%s", url)
             return
         out = self.query_one("#output-input", Input).value.strip() or "./downloads"
+        try:
+            out = _validate_output_folder(out)
+        except ValueError:
+            self._log("[bold red]✗[/] Output folder is not a valid path.")
+            self._unlock_ui()
+            return
         spotdl_cmd = find_spotdl()
         if not await validate_spotdl(spotdl_cmd):
             self._log(
@@ -1965,6 +1939,12 @@ class SpotifyDownloader(App):
             log.warning("Invalid URL entered for fresh download | url=%s", url)
             return
         out = self.query_one("#output-input", Input).value.strip() or "./downloads"
+        try:
+            out = _validate_output_folder(out)
+        except ValueError:
+            self._log("[bold red]✗[/] Output folder is not a valid path.")
+            self._unlock_ui()
+            return
         spotdl_cmd = find_spotdl()
         if not await validate_spotdl(spotdl_cmd):
             self._log(
@@ -1989,9 +1969,7 @@ class SpotifyDownloader(App):
         self._status_label.update("Fresh download…")
         self._progress_bar.update(total=100, progress=0)
         self._log_widget.clear()
-        self._log(
-            f"[bold yellow]⟳[/] Fresh download (overwriting existing): [bold]{url}[/]"
-        )
+        self._log(f"[bold yellow]⟳[/] Fresh download (overwriting existing): [bold]{url}[/]")
         self._cancel_requested = False
         self._rate_limit_hint_shown = False
         self._check_cookie_file()
@@ -2027,6 +2005,12 @@ class SpotifyDownloader(App):
             self._log("[dim]No failed tracks to retry.[/]")
             return
         out = self.query_one("#output-input", Input).value.strip() or "./downloads"
+        try:
+            out = _validate_output_folder(out)
+        except ValueError:
+            self._log("[bold red]✗[/] Output folder is not a valid path.")
+            self._unlock_ui()
+            return
         spotdl_cmd = find_spotdl()
         if not await validate_spotdl(spotdl_cmd):
             self._log(
@@ -2053,9 +2037,7 @@ class SpotifyDownloader(App):
         self._status_label.update(f"Retrying {len(track_urls)} track(s)…")
         self._progress_bar.update(total=len(track_urls), progress=0)
         self._log_widget.clear()
-        self._log(
-            f"[bold orange1]🔄[/] Retrying [bold]{len(track_urls)}[/] failed track(s)…"
-        )
+        self._log(f"[bold orange1]🔄[/] Retrying [bold]{len(track_urls)}[/] failed track(s)…")
         self._cancel_requested = False
         self._rate_limit_hint_shown = False
         self._check_cookie_file()
@@ -2069,9 +2051,7 @@ class SpotifyDownloader(App):
         log.info("Running spotDL (retry) | cmd=%s", " ".join(cmd))
         await self._run_spotdl(cmd, url="", output_folder=out)
         self._unlock_ui()
-        log.info(
-            "Retry handler finished | remaining_failed=%d", len(self._failed_tracks)
-        )
+        log.info("Retry handler finished | remaining_failed=%d", len(self._failed_tracks))
 
     @on(Button.Pressed, "#quit-btn")
     async def on_quit(self) -> None:

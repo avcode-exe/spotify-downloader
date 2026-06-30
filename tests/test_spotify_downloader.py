@@ -19,39 +19,28 @@ class TestIsValidUrl:
 
     def test_accepts_valid_http_url(self) -> None:
         assert (
-            SpotifyDownloader._is_valid_url(
-                f"https://open.spotify.com/playlist/{self.VALID_ID}"
-            )
+            SpotifyDownloader._is_valid_url(f"https://open.spotify.com/playlist/{self.VALID_ID}")
             is True
         )
 
     def test_rejects_short_id(self) -> None:
-        assert (
-            SpotifyDownloader._is_valid_url("https://open.spotify.com/playlist/short")
-            is False
-        )
+        assert SpotifyDownloader._is_valid_url("https://open.spotify.com/playlist/short") is False
 
     def test_rejects_invalid_chars(self) -> None:
         assert (
-            SpotifyDownloader._is_valid_url(
-                "https://open.spotify.com/playlist/!!!invalid!!!"
-            )
+            SpotifyDownloader._is_valid_url("https://open.spotify.com/playlist/!!!invalid!!!")
             is False
         )
 
     def test_accepts_valid_spotify_uri(self) -> None:
-        assert (
-            SpotifyDownloader._is_valid_url(f"spotify:playlist:{self.VALID_ID}") is True
-        )
+        assert SpotifyDownloader._is_valid_url(f"spotify:playlist:{self.VALID_ID}") is True
 
     def test_rejects_invalid_uri_id(self) -> None:
         assert SpotifyDownloader._is_valid_url("spotify:playlist:short") is False
 
     def test_accepts_track_http_url(self) -> None:
         assert (
-            SpotifyDownloader._is_valid_url(
-                f"https://open.spotify.com/track/{self.VALID_ID}"
-            )
+            SpotifyDownloader._is_valid_url(f"https://open.spotify.com/track/{self.VALID_ID}")
             is True
         )
 
@@ -60,9 +49,7 @@ class TestIsValidUrl:
 
     def test_rejects_album_url(self) -> None:
         assert (
-            SpotifyDownloader._is_valid_url(
-                f"https://open.spotify.com/album/{self.VALID_ID}"
-            )
+            SpotifyDownloader._is_valid_url(f"https://open.spotify.com/album/{self.VALID_ID}")
             is False
         )
 

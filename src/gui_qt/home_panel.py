@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QCursor
 from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -22,8 +23,6 @@ class HomePanel(QWidget):
     download_clicked = Signal()
     fresh_clicked = Signal()
     retry_clicked = Signal()
-    preview_clicked = Signal()
-    duplicates_clicked = Signal()
     browse_output_clicked = Signal()
 
     def __init__(self) -> None:
@@ -57,9 +56,8 @@ class HomePanel(QWidget):
         layout.addWidget(url_label)
 
         self._url_input = QLineEdit()
-        self._url_input.setPlaceholderText(
-            "https://open.spotify.com/playlist/... or /track/..."
-        )
+        self._url_input.setPlaceholderText("https://open.spotify.com/playlist/... or /track/...")
+        self._url_input.setCursor(QCursor(Qt.CursorShape.IBeamCursor))
         self._url_input.setStyleSheet("""
             QLineEdit {
                 background-color: #282828;
@@ -85,12 +83,14 @@ class HomePanel(QWidget):
 
         self._output_input = QLineEdit()
         self._output_input.setText("./downloads")
+        self._output_input.setCursor(QCursor(Qt.CursorShape.IBeamCursor))
         self._output_input.setStyleSheet(self._url_input.styleSheet())
         output_row.addWidget(self._output_input, 1)
 
         self._browse_btn = QPushButton("Browse")
         self._browse_btn.setFont(get_button_font())
         self._browse_btn.setMinimumWidth(90)
+        self._browse_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self._browse_btn.clicked.connect(lambda: self.browse_output_clicked.emit())
         output_row.addWidget(self._browse_btn)
 
@@ -119,6 +119,7 @@ class HomePanel(QWidget):
         self._download_btn.setMinimumHeight(38)
         self._download_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self._download_btn.setProperty("type", "primary")
+        self._download_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self._download_btn.clicked.connect(lambda: self.download_clicked.emit())
         primary_row.addWidget(self._download_btn)
 
@@ -127,6 +128,7 @@ class HomePanel(QWidget):
         self._fresh_btn.setMinimumHeight(38)
         self._fresh_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self._fresh_btn.setProperty("type", "secondary")
+        self._fresh_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self._fresh_btn.clicked.connect(lambda: self.fresh_clicked.emit())
         primary_row.addWidget(self._fresh_btn)
 
@@ -136,30 +138,11 @@ class HomePanel(QWidget):
         self._retry_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self._retry_btn.setEnabled(False)
         self._retry_btn.setProperty("type", "secondary")
+        self._retry_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self._retry_btn.clicked.connect(lambda: self.retry_clicked.emit())
         primary_row.addWidget(self._retry_btn)
 
         actions_card_layout.addLayout(primary_row)
-
-        # Secondary actions: Preview | Duplicates
-        secondary_row = QHBoxLayout()
-        secondary_row.setSpacing(8)
-
-        self._preview_btn = QPushButton("🔎  Preview")
-        self._preview_btn.setFont(get_button_font())
-        self._preview_btn.setMinimumHeight(36)
-        self._preview_btn.setProperty("type", "ghost")
-        self._preview_btn.clicked.connect(lambda: self.preview_clicked.emit())
-        secondary_row.addWidget(self._preview_btn, 1)
-
-        self._duplicates_btn = QPushButton("📋  Duplicates")
-        self._duplicates_btn.setFont(get_button_font())
-        self._duplicates_btn.setMinimumHeight(36)
-        self._duplicates_btn.setProperty("type", "ghost")
-        self._duplicates_btn.clicked.connect(lambda: self.duplicates_clicked.emit())
-        secondary_row.addWidget(self._duplicates_btn, 1)
-
-        actions_card_layout.addLayout(secondary_row)
         layout.addWidget(actions_card)
 
         # Progress Card
@@ -221,21 +204,23 @@ class HomePanel(QWidget):
         self._download_btn.setEnabled(not busy)
         self._fresh_btn.setEnabled(not busy)
         self._retry_btn.setEnabled(not busy)
-        self._preview_btn.setEnabled(not busy)
-        self._duplicates_btn.setEnabled(not busy)
         self._browse_btn.setEnabled(not busy)
         self._url_input.setEnabled(not busy)
         self._output_input.setEnabled(not busy)
 
-    def update_status(
-        self, status: str, track: str = "\u2014", progress: float = 0.0
-    ) -> None:
+    def update_status(self, status: str, track: str = "\u2014", progress: float = 0.0) -> None:
         self._status_indicator.setText(status)
         self._track_label.setText(track)
         self._progress_bar.setValue(int(progress * 100))
 
     def set_retry_enabled(self, enabled: bool) -> None:
         self._retry_btn.setEnabled(enabled)
+
+    def get_progress_fraction(self) -> float:
+        return self._progress_bar.value() / 100.0
+
+    def set_progress_fraction(self, fraction: float) -> None:
+        self._progress_bar.setValue(int(fraction * 100))
 
     def get_url(self) -> str:
         return self._url_input.text().strip()

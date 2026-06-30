@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QCursor
 from PySide6.QtWidgets import (
     QComboBox,
     QFileDialog,
@@ -22,7 +23,6 @@ from .theme import (
     get_section_font,
     get_small_font,
 )
-
 
 BROWSER_OPTIONS: list[tuple[str, str]] = [
     ("Auto (try all)", "auto"),
@@ -83,9 +83,7 @@ class SettingsPanel(QWidget):
             ["youtube-music", "youtube", "soundcloud", "bandcamp", "piped"],
             "Audio source",
         )
-        self._provider_combo.setCurrentText(
-            self._settings.get("audio_provider", "youtube-music")
-        )
+        self._provider_combo.setCurrentText(self._settings.get("audio_provider", "youtube-music"))
         self._provider_combo.currentTextChanged.connect(self._on_change)
 
         # Duplicate Policy
@@ -120,9 +118,7 @@ class SettingsPanel(QWidget):
             is_inline=True,
         )
         browser_val = self._settings.get("browser", "auto")
-        display_browser = {v: k for k, v in BROWSER_OPTIONS}.get(
-            browser_val, "Auto (try all)"
-        )
+        display_browser = {v: k for k, v in BROWSER_OPTIONS}.get(browser_val, "Auto (try all)")
         idx = self._browser_combo.findText(display_browser)
         if idx >= 0:
             self._browser_combo.setCurrentIndex(idx)
@@ -132,12 +128,14 @@ class SettingsPanel(QWidget):
         self._extract_btn = QPushButton("Extract")
         self._extract_btn.setObjectName("extractBtn")
         self._extract_btn.setFont(get_button_font())
+        self._extract_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self._extract_btn.clicked.connect(self._on_extract)
         cookie_row.addWidget(self._extract_btn)
 
         self._browse_cookie_btn = QPushButton("Browse\u2026")
         self._browse_cookie_btn.setObjectName("ghost")
         self._browse_cookie_btn.setFont(get_button_font())
+        self._browse_cookie_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self._browse_cookie_btn.clicked.connect(self._browse_cookie_file)
         cookie_row.addWidget(self._browse_cookie_btn)
 
@@ -244,6 +242,7 @@ class SettingsPanel(QWidget):
         row.addWidget(label)
 
         input_field = QLineEdit()
+        input_field.setCursor(QCursor(Qt.CursorShape.IBeamCursor))
         input_field.setStyleSheet("""
             QLineEdit {
                 background-color: #282828;
@@ -317,9 +316,7 @@ class SettingsPanel(QWidget):
 
     def _status_text(self) -> str:
         settings = self._settings
-        source = (
-            settings.get("audio_provider", "youtube-music").replace("-", " ").title()
-        )
+        source = settings.get("audio_provider", "youtube-music").replace("-", " ").title()
         duplicate_policy = settings.get("duplicate_policy", "skip")
         if duplicate_policy not in _DUPLICATE_POLICY_MAP:
             duplicate_policy = "skip"

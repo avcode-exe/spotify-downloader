@@ -7,7 +7,6 @@ import re
 import shutil
 import sys
 
-
 _SPOTIFY_ID_RE = re.compile(r"^[A-Za-z0-9]{22}$")
 DOWNLOADING_RE = re.compile(r"Downloading\s+(.+)", re.IGNORECASE)
 DONE_RE = re.compile(r"(?:Downloaded|✓)\s+(.+)", re.IGNORECASE)
@@ -56,9 +55,7 @@ async def validate_spotdl(spotdl_cmd: list[str]) -> bool:
         return await proc.wait() == 0
     except Exception as exc:
         log = logging.getLogger("spotify_downloader")
-        log.error(
-            "spotDL validation failed | cmd=%s error=%s", " ".join(spotdl_cmd), exc
-        )
+        log.error("spotDL validation failed | cmd=%s error=%s", " ".join(spotdl_cmd), exc)
         return False
 
 
@@ -90,9 +87,7 @@ async def _ensure_deno_inner(spotdl_cmd: list[str]) -> bool:
         )
         return False
     except Exception as exc:
-        logging.getLogger("spotify_downloader").warning(
-            "Deno install skipped | error=%s", exc
-        )
+        logging.getLogger("spotify_downloader").warning("Deno install skipped | error=%s", exc)
         return False
 
 

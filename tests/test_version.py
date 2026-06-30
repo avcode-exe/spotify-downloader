@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from src import __version__
 from scripts.write_version_include import write_version_include
+from src import __version__
 
 
 class TestVersionConstant:
@@ -23,25 +23,19 @@ class TestVersionConstant:
 
 
 class TestWriteVersionInclude:
-    def test_function_emits_isspp_define(
-        self, tmp_path: pytest.TempPathFactory
-    ) -> None:
+    def test_function_emits_isspp_define(self, tmp_path: pytest.TempPathFactory) -> None:
         target = tmp_path / "version.iss"
         write_version_include("9.9.9", target)
         content = target.read_text(encoding="utf-8")
         assert '#define MyAppVersion "9.9.9"' in content
         assert "Auto-generated" in content
 
-    def test_function_creates_parent_dir(
-        self, tmp_path: pytest.TempPathFactory
-    ) -> None:
+    def test_function_creates_parent_dir(self, tmp_path: pytest.TempPathFactory) -> None:
         target = tmp_path / "nested" / "deeper" / "_version.iss"
         write_version_include("1.0.0", target)
         assert target.exists()
 
-    def test_function_uses_current_version(
-        self, tmp_path: pytest.TempPathFactory
-    ) -> None:
+    def test_function_uses_current_version(self, tmp_path: pytest.TempPathFactory) -> None:
         target = tmp_path / "_version.iss"
         write_version_include(__version__, target)
         content = target.read_text(encoding="utf-8")

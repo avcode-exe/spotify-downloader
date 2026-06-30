@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Callable, Sequence
+from collections.abc import Callable, Sequence
 
 import customtkinter as ctk
 
@@ -12,6 +12,9 @@ from .theme import (
     FONT_CAPTION,
     FONT_LABEL,
     FONT_SECTION,
+    GAP_ACTION,
+    GAP_CARD_INNER,
+    GAP_ROW,
     SPOTIFY_BORDER_COLOR,
     SPOTIFY_DARK_GRAY,
     SPOTIFY_DISABLED_TEXT,
@@ -21,9 +24,6 @@ from .theme import (
     SPOTIFY_TEXT_MUTED,
     SPOTIFY_WHITE,
     frame_kwargs,
-    GAP_ACTION,
-    GAP_CARD_INNER,
-    GAP_ROW,
 )
 
 BROWSER_OPTIONS: list[tuple[str, str]] = [
@@ -71,13 +71,9 @@ class SettingsFrame(ctk.CTkFrame):
         self._provider_var = ctk.StringVar(
             value=self._settings.get("audio_provider", "youtube-music")
         )
-        self._policy_var = ctk.StringVar(
-            value=self._settings.get("duplicate_policy", "skip")
-        )
+        self._policy_var = ctk.StringVar(value=self._settings.get("duplicate_policy", "skip"))
         self._proxy_var = ctk.StringVar(value=self._settings.get("proxy", ""))
-        self._cookie_file_var = ctk.StringVar(
-            value=self._settings.get("cookie_file", "")
-        )
+        self._cookie_file_var = ctk.StringVar(value=self._settings.get("cookie_file", ""))
         self._browser_var = ctk.StringVar(value=self._settings.get("browser", "auto"))
 
         format_options = ["mp3", "m4a", "flac", "opus", "ogg", "wav"]
@@ -103,12 +99,8 @@ class SettingsFrame(ctk.CTkFrame):
 
         self._add_select_row(inner, "Format", self._format_var, format_options)
         self._add_select_row(inner, "Bitrate", self._bitrate_var, bitrate_options)
-        self._add_select_row(
-            inner, "Audio source", self._provider_var, provider_options
-        )
-        self._add_select_row(
-            inner, "Duplicate policy", self._policy_var, policy_options
-        )
+        self._add_select_row(inner, "Audio source", self._provider_var, provider_options)
+        self._add_select_row(inner, "Duplicate policy", self._policy_var, policy_options)
         self._add_select_row(inner, "Browser", self._browser_var, BROWSER_OPTIONS)
         self._add_entry_row(inner, "Proxy", self._proxy_var)
         self._add_entry_row(inner, "Cookie file", self._cookie_file_var)
@@ -196,9 +188,7 @@ class SettingsFrame(ctk.CTkFrame):
         var_name = variable._name.lstrip("!").removesuffix("_var")
         self._value_maps[var_name] = display_to_value
 
-        def _make_callback(
-            vm: dict[str, str], var: ctk.StringVar
-        ) -> Callable[[str], None]:
+        def _make_callback(vm: dict[str, str], var: ctk.StringVar) -> Callable[[str], None]:
             def _callback(selected: str) -> None:
                 internal = vm.get(selected, selected)
                 var.set(internal)
@@ -225,9 +215,7 @@ class SettingsFrame(ctk.CTkFrame):
         )
         option.pack(side="left", fill="x", expand=True)
 
-    def _add_entry_row(
-        self, parent: ctk.CTkFrame, label: str, variable: ctk.StringVar
-    ) -> None:
+    def _add_entry_row(self, parent: ctk.CTkFrame, label: str, variable: ctk.StringVar) -> None:
         row = ctk.CTkFrame(parent, fg_color="transparent")
         row.pack(fill="x", pady=(0, GAP_ROW))
 
@@ -292,9 +280,7 @@ class SettingsFrame(ctk.CTkFrame):
 
     def _status_text(self) -> str:
         settings = self._settings
-        source = (
-            settings.get("audio_provider", "youtube-music").replace("-", " ").title()
-        )
+        source = settings.get("audio_provider", "youtube-music").replace("-", " ").title()
         duplicate_policy = settings.get("duplicate_policy", "skip")
         if duplicate_policy not in _DUPLICATE_POLICY_MAP:
             duplicate_policy = "skip"

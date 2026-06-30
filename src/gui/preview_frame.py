@@ -9,14 +9,14 @@ from src.state import summarize_track_state
 from .theme import (
     FONT_SECTION,
     FONT_SMALL,
+    GAP_CARD_INNER,
+    GAP_ROW,
     SPOTIFY_BORDER_COLOR,
     SPOTIFY_DARK_GRAY,
     SPOTIFY_GREEN,
     SPOTIFY_LIGHT_GRAY,
     SPOTIFY_WHITE,
     frame_kwargs,
-    GAP_CARD_INNER,
-    GAP_ROW,
 )
 
 
@@ -75,17 +75,13 @@ class PreviewFrame(ctk.CTkFrame):
         lines: list[str] = []
 
         # Section: Scan overview
-        lines.append("Output folder: {}".format(output_folder))
+        lines.append(f"Output folder: {output_folder}")
         lines.append("Local audio files: {}".format(summary["files"]))
         lines.append("Unique tracks: {}".format(summary["unique_tracks"]))
         lines.append("Duplicate groups: {}".format(summary["duplicate_groups"]))
-        lines.append(
-            "Possible duplicate groups: {}".format(summary["possible_duplicate_groups"])
-        )
+        lines.append("Possible duplicate groups: {}".format(summary["possible_duplicate_groups"]))
         lines.append("Duplicate copies to move: {}".format(summary["duplicate_copies"]))
-        lines.append(
-            "Possible duplicate copies: {}".format(summary["possible_duplicate_copies"])
-        )
+        lines.append("Possible duplicate copies: {}".format(summary["possible_duplicate_copies"]))
 
         lines.append("")
         lines.append("Track state:")
@@ -101,13 +97,13 @@ class PreviewFrame(ctk.CTkFrame):
                 keep = group.keep
                 keep_name = keep.path.name if keep else "unknown"
                 lines.append("")
-                lines.append("  {}: {}".format(group.reason, group.key))
-                lines.append("    keep: {}".format(keep_name))
+                lines.append(f"  {group.reason}: {group.key}")
+                lines.append(f"    keep: {keep_name}")
                 for track in group.tracks:
                     if track is keep:
                         continue
                     action = "move" if group.safe_to_move else "review"
-                    lines.append("    {}: {}".format(action, track.path.name))
+                    lines.append(f"    {action}: {track.path.name}")
         else:
             lines.append("")
             lines.append("No duplicate groups detected.")

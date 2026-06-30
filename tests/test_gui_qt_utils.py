@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from src.gui.utils import (
+from src.gui_qt.utils import (
     format_download_status,
     format_elapsed,
     format_track_line,

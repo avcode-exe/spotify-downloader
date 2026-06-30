@@ -3,7 +3,7 @@
 A terminal/GUI app that downloads Spotify playlists and individual tracks by matching to
 YouTube Music (via [spotDL](https://github.com/spotDL/spotify-downloader)).
 
-[![Python](https://img.shields.io/badge/Python-3.10+-blue)](https://www.python.org/) [![spotDL](https://img.shields.io/badge/spotDL-4.5+-green)](https://github.com/spotDL/spotify-downloader)
+[![Python](https://img.shields.io/badge/Python-3.11+-blue)](https://www.python.org/) [![spotDL](https://img.shields.io/badge/spotDL-4.5+-green)](https://github.com/spotDL/spotify-downloader)
 
 ## Features
 
@@ -21,17 +21,17 @@ YouTube Music (via [spotDL](https://github.com/spotDL/spotify-downloader)).
 - **Rate-Limit Detection** — Warns when YouTube is blocking downloads and suggests setting a cookie file
 - **Cancellation** — Cancel any in-progress download at any time (now kills the entire spotDL process tree)
 - **Cross-Platform** — Works on Windows, macOS, and Linux
-- **208 unit tests** — Full coverage of URL validation, proxy handling, state persistence, duplicate logic, and UI utilities
+- **271 unit tests** — Full coverage of URL validation, proxy handling, state persistence, duplicate logic, and UI utilities
 - **Improved error handling** — Folder creation catches `OSError` instead of just `PermissionError`
 - **Safer metadata cache eviction** — Uses `pop(key, None)` to avoid race conditions during cache cleanup
 
 ## Requirements
 
-- **Python 3.10+**
+- **Python 3.11+**
 - **FFmpeg** — handles audio conversion (spotDL can auto-install it)
 - **yt-dlp** — for audio sourcing and cookie extraction (installed with spotDL)
 - **TUI (optional):** `textual`
-- **GUI (optional):** `customtkinter`
+- **GUI (optional):** `PySide6>=6.6.0`
 
 ---
 
@@ -48,7 +48,7 @@ You can install and run this project in three ways:
 
 ### Prerequisites
 
-- Python 3.10 or later
+- Python 3.11 or later
 - FFmpeg (spotDL can auto-install it)
 - PySide6 (installed via `pip install -r requirements.txt`)
 
@@ -226,7 +226,7 @@ python spotify_downloader.py
 ### Build from source
 
 **Prerequisites:**
-- Python 3.10+
+- Python 3.11+
 - Windows OS
 - Inno Setup 6+ (bundled at `C:\Program\ISCC.exe` for local builds)
 
@@ -418,7 +418,7 @@ spotify_downloader/
 ├── gui_app.py             # Modern GUI entry point (PySide6/Qt 6)
 ├── spotify_downloader.py  # TUI entry point (Textual) + download logic
 ├── src/
-│   ├── gui_qt/            # NEW: PySide6 GUI package
+│   ├── gui_qt/            # Active PySide6 GUI package
 │   │   ├── __init__.py
 │   │   ├── main_window.py # QMainWindow with sidebar + stacked widget
 │   │   ├── home_panel.py  # URL input, output folder, action buttons
@@ -478,7 +478,7 @@ The project includes a CI workflow (`.github/workflows/ci.yml`) that runs on eve
 | Job | What it does |
 |-----|-------------|
 | `lint` | Ruff check + format check on all Python files |
-| `test` | Full pytest suite (208 tests) |
+| `test` | Full pytest suite (271 tests) |
 | `typecheck` | mypy static type checking |
 | `compile` | `compileall` verification of all `.py` files |
 | `validate` | Import smoke tests for TUI, GUI, and installer modules |

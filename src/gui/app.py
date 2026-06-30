@@ -1,17 +1,20 @@
 from __future__ import annotations
 
+import contextlib
 import importlib.metadata
 import json
+import logging
 import os
 import time
 import urllib.request
-from packaging.version import parse as parse_version
 from threading import Thread
 from typing import Any
 
 import customtkinter as ctk
+from packaging.version import parse as parse_version
 
 from src.manifest import group_duplicates, scan_output_folder
+from src.models import TrackStatus
 from src.spotdl_tools import is_valid_spotify_url
 from src.state import (
     HISTORY_FILE,
@@ -21,15 +24,14 @@ from src.state import (
     summarize_track_state,
 )
 
-from .theme import apply_theme, SPOTIFY_BLACK, SPOTIFY_GREEN
 from .duplicates_frame import DuplicatesFrame
 from .history_frame import HistoryFrame
 from .home_frame import HomeFrame
 from .log_frame import LogFrame
 from .preview_frame import PreviewFrame
 from .settings_frame import SettingsFrame
+from .theme import SPOTIFY_BLACK, SPOTIFY_GREEN, apply_theme
 from .workers import SpotDLWorker, WorkerResult
-from src.models import TrackStatus
 
 
 class SpotifyDownloaderGUI(ctk.CTk):
@@ -90,39 +92,27 @@ class SpotifyDownloaderGUI(ctk.CTk):
             on_retry=self._on_retry,
             on_cancel=self._on_cancel,
         )
-        self._home_frame.grid(
-            row=0, column=0, sticky="nsew", padx=(0, 12), pady=(0, 12)
-        )
+        self._home_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 12), pady=(0, 12))
 
         self._settings_frame = SettingsFrame(
             self._scroll_frame, self._settings, on_change=self._on_settings_changed
         )
-        self._settings_frame.grid(
-            row=0, column=1, sticky="nsew", padx=(12, 0), pady=(0, 12)
-        )
+        self._settings_frame.grid(row=0, column=1, sticky="nsew", padx=(12, 0), pady=(0, 12))
 
         # Row 1: Preview (left) + Duplicates (right) - initially hidden
         self._preview_frame = PreviewFrame(self._scroll_frame)
-        self._preview_frame.grid(
-            row=1, column=0, sticky="nsew", padx=(0, 12), pady=(0, 12)
-        )
+        self._preview_frame.grid(row=1, column=0, sticky="nsew", padx=(0, 12), pady=(0, 12))
 
         self._duplicates_frame = DuplicatesFrame(self._scroll_frame)
-        self._duplicates_frame.grid(
-            row=1, column=1, sticky="nsew", padx=(12, 0), pady=(0, 12)
-        )
+        self._duplicates_frame.grid(row=1, column=1, sticky="nsew", padx=(12, 0), pady=(0, 12))
 
         # Row 2: History (full width)
         self._history_frame = HistoryFrame(self._scroll_frame)
-        self._history_frame.grid(
-            row=2, column=0, columnspan=2, sticky="nsew", padx=0, pady=(0, 12)
-        )
+        self._history_frame.grid(row=2, column=0, columnspan=2, sticky="nsew", padx=0, pady=(0, 12))
 
         # Row 3: Log (full width)
         self._log_frame = LogFrame(self._scroll_frame)
-        self._log_frame.grid(
-            row=3, column=0, columnspan=2, sticky="nsew", padx=0, pady=(0, 0)
-        )
+        self._log_frame.grid(row=3, column=0, columnspan=2, sticky="nsew", padx=0, pady=(0, 0))
 
         self._preview_visible = False
         self._duplicates_visible = False
@@ -159,26 +149,22 @@ class SpotifyDownloaderGUI(ctk.CTk):
         }
         try:
             if os.path.isfile(SETTINGS_FILE):
-                with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
+                with open(SETTINGS_FILE, encoding="utf-8") as f:
                     saved = json.load(f)
                 if isinstance(saved, dict):
-                    defaults.update(
-                        {k: str(v) for k, v in saved.items() if k in defaults}
-                    )
+                    defaults.update({k: str(v) for k, v in saved.items() if k in defaults})
         except (json.JSONDecodeError, OSError):
             pass
         return defaults
 
     def _save_settings(self) -> None:
-        try:
+        with contextlib.suppress(OSError):
             save_json_secure(SETTINGS_FILE, self._settings)
-        except OSError:
-            pass
 
     def _load_history(self) -> list[dict[str, Any]]:
         try:
             if os.path.isfile(HISTORY_FILE):
-                with open(HISTORY_FILE, "r", encoding="utf-8") as f:
+                with open(HISTORY_FILE, encoding="utf-8") as f:
                     data = json.load(f)
                 if isinstance(data, list):
                     return data
@@ -187,10 +173,8 @@ class SpotifyDownloaderGUI(ctk.CTk):
         return []
 
     def _save_history(self) -> None:
-        try:
+        with contextlib.suppress(OSError):
             save_json_secure(HISTORY_FILE, self._history)
-        except OSError:
-            pass
 
     def _append_history(
         self, url: str, output_folder: str, tracks_downloaded: int, status: str
@@ -210,9 +194,7 @@ class SpotifyDownloaderGUI(ctk.CTk):
         self._render_history()
 
     def _render_history(self) -> None:
-        self._history_frame.render(
-            self._history, summarize_track_state(self._track_state)
-        )
+        self._history_frame.render(self._history, summarize_track_state(self._track_state))
 
     def _apply_settings_to_ui(self) -> None:
         self._settings = self._settings_frame.get_settings()
@@ -225,9 +207,7 @@ class SpotifyDownloaderGUI(ctk.CTk):
         output_folder = self._home_frame.output_entry.get().strip() or "./downloads"
         tracks = scan_output_folder(output_folder)
         duplicate_groups = group_duplicates(tracks)
-        self._preview_frame.render(
-            tracks, duplicate_groups, self._track_state, output_folder
-        )
+        self._preview_frame.render(tracks, duplicate_groups, self._track_state, output_folder)
         self._duplicates_frame.render(duplicate_groups)
 
     def _on_preview(self) -> None:
@@ -349,9 +329,7 @@ class SpotifyDownloaderGUI(ctk.CTk):
             self._reflect_failed_state()
 
     def _reflect_failed_state(self) -> None:
-        self._home_frame.retry_btn.configure(
-            state="normal" if self._failed_tracks else "disabled"
-        )
+        self._home_frame.retry_btn.configure(state="normal" if self._failed_tracks else "disabled")
 
     def _check_cookie_file(self) -> None:
         cookie_file = self._settings.get("cookie_file", "").strip()
@@ -398,8 +376,10 @@ class SpotifyDownloaderGUI(ctk.CTk):
                     latest = data["info"]["version"]
                     if parse_version(latest) > parse_version(installed):
                         updates.append(f"{display_name} {installed} \u2192 {latest}")
-                except Exception:
-                    pass
+                except (urllib.error.URLError, json.JSONDecodeError, KeyError) as exc:
+                    logging.getLogger(__name__).debug(
+                        "Update check failed for %s: %s", pkg_name, exc
+                    )
             if updates:
                 pkgs = " ".join(pkg for _, pkg in self._CHECKED_PACKAGES)
                 msg = (

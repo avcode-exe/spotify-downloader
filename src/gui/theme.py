@@ -160,9 +160,7 @@ def textbox_kwargs() -> dict[str, object]:
     }
 
 
-def label_kwargs(
-    color: str | None = None, font: tuple | None = None
-) -> dict[str, object]:
+def label_kwargs(color: str | None = None, font: tuple | None = None) -> dict[str, object]:
     kw: dict[str, object] = {}
     if color:
         kw["text_color"] = color

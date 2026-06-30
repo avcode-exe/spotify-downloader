@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import time
@@ -23,7 +24,6 @@ from src.state import (
     SETTINGS_FILE,
     load_track_state,
     save_json_secure,
-    summarize_track_state,
 )
 
 from .duplicates_panel import DuplicatesPanel
@@ -57,10 +57,16 @@ class MainWindow(QWidget):
         self._settings_store = QSettings("SpotifyDownloader", "App")
         self._tour_shown = self._settings_store.value("tourShown", False, type=bool)
 
+        # Defer expensive UI refreshes so rapid updates collapse into one render.
+        self._preview_refresh_timer = QTimer(self)
+        self._preview_refresh_timer.setSingleShot(True)
+        self._preview_refresh_timer.timeout.connect(self._refresh_preview)
+        self._pending_history_render = False
+
         self._build_ui()
         self._apply_settings_to_ui()
         self._render_history()
-        self._refresh_preview()
+        self._schedule_preview_refresh()
 
         # Show tour on first launch
         if not self._tour_shown:
@@ -91,8 +97,6 @@ class MainWindow(QWidget):
         self._home_panel.download_clicked.connect(self._on_download)
         self._home_panel.fresh_clicked.connect(self._on_fresh)
         self._home_panel.retry_clicked.connect(self._on_retry)
-        self._home_panel.preview_clicked.connect(self._on_preview)
-        self._home_panel.duplicates_clicked.connect(self._on_duplicates)
         self._home_panel.browse_output_clicked.connect(self._browse_output)
 
         self._sidebar.cancel_clicked.connect(self._on_cancel)
@@ -117,17 +121,12 @@ class MainWindow(QWidget):
 
         # Status bar
         self._status_bar = QStatusBar()
-        self._status_bar.setStyleSheet(
-            "background-color: #181818; color: #6A6A6A; font-size: 9pt;"
-        )
+        self._status_bar.setStyleSheet("background-color: #181818; color: #6A6A6A; font-size: 9pt;")
         self._status_label = QLabel("Ready")
         self._status_bar.addPermanentWidget(self._status_label)
         content_layout.addWidget(self._status_bar)
 
         main_layout.addWidget(content_container, 1)
-
-        # Connect sidebar navigation (routes through _on_section_changed for str→int conversion)
-        self._sidebar.section_changed.connect(self._on_section_changed)
 
     def _on_section_changed(self, section_id: str) -> None:
         section_map = {
@@ -157,26 +156,22 @@ class MainWindow(QWidget):
         }
         try:
             if os.path.isfile(SETTINGS_FILE):
-                with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
+                with open(SETTINGS_FILE, encoding="utf-8") as f:
                     saved = json.load(f)
                 if isinstance(saved, dict):
-                    defaults.update(
-                        {k: str(v) for k, v in saved.items() if k in defaults}
-                    )
+                    defaults.update({k: str(v) for k, v in saved.items() if k in defaults})
         except (json.JSONDecodeError, OSError):
             pass
         return defaults
 
     def _save_settings(self) -> None:
-        try:
+        with contextlib.suppress(OSError):
             save_json_secure(SETTINGS_FILE, self._settings)
-        except OSError:
-            pass
 
     def _load_history(self) -> list[dict[str, Any]]:
         try:
             if os.path.isfile(HISTORY_FILE):
-                with open(HISTORY_FILE, "r", encoding="utf-8") as f:
+                with open(HISTORY_FILE, encoding="utf-8") as f:
                     data = json.load(f)
                 if isinstance(data, list):
                     return data
@@ -185,10 +180,8 @@ class MainWindow(QWidget):
         return []
 
     def _save_history(self) -> None:
-        try:
+        with contextlib.suppress(OSError):
             save_json_secure(HISTORY_FILE, self._history)
-        except OSError:
-            pass
 
     def _append_history(
         self, url: str, output_folder: str, tracks_downloaded: int, status: str
@@ -205,12 +198,18 @@ class MainWindow(QWidget):
         )
         self._history = self._history[:100]
         self._save_history()
-        self._render_history()
+        self._request_history_render()
 
     def _render_history(self) -> None:
-        self._history_panel.render(
-            self._history, summarize_track_state(self._track_state)
-        )
+        self._history_panel.render(self._history)
+
+    def _request_history_render(self) -> None:
+        if not self._pending_history_render:
+            self._pending_history_render = True
+            QTimer.singleShot(200, self._render_history)
+
+    def _schedule_preview_refresh(self) -> None:
+        self._preview_refresh_timer.start(200)
 
     def _apply_settings_to_ui(self) -> None:
         self._settings = self._settings_panel.get_settings()
@@ -223,17 +222,13 @@ class MainWindow(QWidget):
         output_folder = self._home_panel.get_output_folder() or "./downloads"
         tracks = scan_output_folder(output_folder)
         duplicate_groups = group_duplicates(tracks)
-        self._preview_panel.render(
-            tracks, duplicate_groups, self._track_state, output_folder
-        )
+        self._preview_panel.render(tracks, duplicate_groups, self._track_state, output_folder)
         self._duplicates_panel.render(duplicate_groups)
 
     def _on_download(self) -> None:
         url = self._home_panel.get_url()
         if not url or not is_valid_spotify_url(url):
-            self._log_panel.write(
-                "Invalid URL. Must be a Spotify playlist or track URL."
-            )
+            self._log_panel.write("Invalid URL. Must be a Spotify playlist or track URL.")
             return
         output_folder = self._home_panel.get_output_folder() or "./downloads"
         self._start_worker(url, output_folder, fresh=False)
@@ -241,15 +236,16 @@ class MainWindow(QWidget):
     def _on_fresh(self) -> None:
         url = self._home_panel.get_url()
         if not url or not is_valid_spotify_url(url):
-            self._log_panel.write(
-                "Invalid URL. Must be a Spotify playlist or track URL."
-            )
+            self._log_panel.write("Invalid URL. Must be a Spotify playlist or track URL.")
             return
         output_folder = self._home_panel.get_output_folder() or "./downloads"
         self._start_worker(url, output_folder, fresh=True)
 
     def _start_worker(self, url: str, output_folder: str, fresh: bool) -> None:
         self._failed_tracks.clear()
+        if self._worker is not None:
+            self._worker.cancel()
+            self._worker.wait(timeout=3000)
         self._worker = SpotDLWorker(self._settings, output_folder)
         self._home_panel.set_busy(True)
         self._sidebar.set_busy(True)
@@ -276,7 +272,9 @@ class MainWindow(QWidget):
             return
         output_folder = self._home_panel.get_output_folder() or "./downloads"
         if self._worker is not None:
+            self._worker.cancel()
             self._worker.terminate()
+            self._worker.wait(timeout=3000)
         self._worker = SpotDLWorker(self._settings, output_folder)
         urls = list(self._failed_tracks)
         self._failed_tracks.clear()
@@ -300,6 +298,10 @@ class MainWindow(QWidget):
             self._worker.cancel()
             self._home_panel.update_status("Cancelled", progress=0.0)
 
+    def closeEvent(self, event) -> None:
+        self._on_quit()
+        event.accept()
+
     def _on_quit(self) -> None:
         if self._worker is not None:
             self._worker.cancel()
@@ -310,16 +312,6 @@ class MainWindow(QWidget):
         directory = QFileDialog.getExistingDirectory(self, "Select output folder")
         if directory:
             self._home_panel.set_output_folder(directory)
-
-    def _on_preview(self) -> None:
-        self._on_section_changed("preview")
-        self._refresh_preview()
-        self._log_panel.write("Preview refreshed")
-
-    def _on_duplicates(self) -> None:
-        self._on_section_changed("duplicates")
-        self._refresh_preview()
-        self._log_panel.write("Duplicates list refreshed")
 
     @Slot(str)
     def _on_worker_log(self, message: str) -> None:
@@ -345,7 +337,7 @@ class MainWindow(QWidget):
     def _on_worker_track(self, track: str) -> None:
         current_status = self._home_panel._status_indicator.text()
         self._home_panel.update_status(
-            current_status, track, self._home_panel._progress_bar.value() / 100
+            current_status, track, self._home_panel.get_progress_fraction()
         )
 
     @Slot(str)
@@ -369,14 +361,17 @@ class MainWindow(QWidget):
         self._home_panel.set_busy(False)
         self._sidebar.set_busy(False)
         self._home_panel.set_retry_enabled(bool(self._failed_tracks))
-        self._refresh_preview()
         self._render_history()
+        self._schedule_preview_refresh()
 
     @Slot(str)
     def _on_worker_error(self, error: str) -> None:
         self._log_panel.write(f"Error: {error}")
         self._home_panel.set_busy(False)
         self._sidebar.set_busy(False)
+        self._home_panel.set_retry_enabled(bool(self._failed_tracks))
+        self._schedule_preview_refresh()
+        self._request_history_render()
 
     def _show_tour(self) -> None:
         overlay = TourOverlay(self)

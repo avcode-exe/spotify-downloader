@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
-
 AUDIO_EXTENSIONS: set[str] = {
     ".mp3",
     ".m4a",

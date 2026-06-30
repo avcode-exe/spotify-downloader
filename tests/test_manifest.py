@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 import pytest
 
@@ -107,9 +107,7 @@ class TestGroupDuplicates:
         groups = group_duplicates(tracks)
         assert len(groups) == 0
 
-    def test_same_normalized_filename(
-        self, fake_track_factory: Callable[..., LocalTrack]
-    ) -> None:
+    def test_same_normalized_filename(self, fake_track_factory: Callable[..., LocalTrack]) -> None:
         tracks = [
             fake_track_factory("My Song", subdir="a"),
             fake_track_factory("My Song", subdir="b"),
@@ -151,9 +149,7 @@ class TestGroupDuplicates:
 
 
 class TestSummarizeScan:
-    def test_summary_counts(
-        self, fake_track_factory: Callable[..., LocalTrack]
-    ) -> None:
+    def test_summary_counts(self, fake_track_factory: Callable[..., LocalTrack]) -> None:
         tracks = [
             fake_track_factory("a", bitrate=320, size=5000),
             fake_track_factory("b", bitrate=128, size=2000),

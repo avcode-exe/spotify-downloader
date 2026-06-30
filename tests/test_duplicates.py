@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 import pytest
 
@@ -64,7 +64,7 @@ class TestUniquePath:
 
 class TestQuarantineDuplicateCopies:
     def test_no_groups_returns_zero(self, output_dir: Path) -> None:
-        count, dest = quarantine_duplicate_copies([], output_dir)
+        count, dest, _ = quarantine_duplicate_copies([], output_dir)
         assert count == 0
         assert dest.parent == output_dir / "duplicates"
 
@@ -77,7 +77,7 @@ class TestQuarantineDuplicateCopies:
             tracks=[track_factory("s1"), track_factory("s2")],
             safe_to_move=False,
         )
-        count, dest = quarantine_duplicate_copies([unsafe], output_dir)
+        count, dest, _ = quarantine_duplicate_copies([unsafe], output_dir)
         assert count == 0
         assert not dest.exists()
 
@@ -92,7 +92,7 @@ class TestQuarantineDuplicateCopies:
             tracks=[t1, t2],
             safe_to_move=True,
         )
-        count, dest = quarantine_duplicate_copies([group], output_dir)
+        count, dest, _ = quarantine_duplicate_copies([group], output_dir)
         assert count == 1
         assert dest.exists()
         assert dest.parent == output_dir / "duplicates"
@@ -129,16 +129,13 @@ class TestQuarantineDuplicateCopies:
             tracks=[t1, t2],
             safe_to_move=True,
         )
-        count, _ = quarantine_duplicate_copies([group], output_dir)
+        count, _, _ = quarantine_duplicate_copies([group], output_dir)
         assert count == 1
 
 
 class TestFormatQuarantineSummary:
     def test_zero_count(self) -> None:
-        assert (
-            format_quarantine_summary(0, Path("/out"))
-            == "No duplicate copies were moved."
-        )
+        assert format_quarantine_summary(0, Path("/out")) == "No duplicate copies were moved."
 
     def test_positive_count(self) -> None:
         result = format_quarantine_summary(3, Path("/out/duplicates"))

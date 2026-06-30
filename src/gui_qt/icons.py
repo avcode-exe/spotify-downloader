@@ -64,15 +64,17 @@ def _svg_home(color: str, size: int) -> QPixmap:
     p = QPainter(pm)
     p.setPen(Qt.PenStyle.NoPen)
     p.setBrush(QColor(color))
-    p.drawPolygon(_polygon(
-        (size * 0.15, size * 0.55),
-        (size * 0.5, size * 0.15),
-        (size * 0.85, size * 0.55),
-        (size * 0.75, size * 0.55),
-        (size * 0.75, size * 0.85),
-        (size * 0.25, size * 0.85),
-        (size * 0.25, size * 0.55),
-    ))
+    p.drawPolygon(
+        _polygon(
+            (size * 0.15, size * 0.55),
+            (size * 0.5, size * 0.15),
+            (size * 0.85, size * 0.55),
+            (size * 0.75, size * 0.55),
+            (size * 0.75, size * 0.85),
+            (size * 0.25, size * 0.85),
+            (size * 0.25, size * 0.55),
+        )
+    )
     p.end()
     return pm
 
@@ -167,15 +169,17 @@ def _svg_download(color: str, size: int) -> QPixmap:
     c = QColor(color)
     p.setBrush(c)
     cx, cy = size / 2, size / 2
-    p.drawPolygon(_polygon(
-        (cx, cy - size * 0.35),
-        (cx - size * 0.15, cy - size * 0.15),
-        (cx - size * 0.15, cy + size * 0.15),
-        (cx - size * 0.35, cy + size * 0.15),
-        (cx + size * 0.35, cy + size * 0.15),
-        (cx + size * 0.15, cy + size * 0.15),
-        (cx + size * 0.15, cy - size * 0.15),
-    ))
+    p.drawPolygon(
+        _polygon(
+            (cx, cy - size * 0.35),
+            (cx - size * 0.15, cy - size * 0.15),
+            (cx - size * 0.15, cy + size * 0.15),
+            (cx - size * 0.35, cy + size * 0.15),
+            (cx + size * 0.35, cy + size * 0.15),
+            (cx + size * 0.15, cy + size * 0.15),
+            (cx + size * 0.15, cy - size * 0.15),
+        )
+    )
     p.setBrush(c)
     p.drawRect(int(cx - size * 0.3), int(cy + size * 0.35), int(size * 0.6), int(size * 0.08))
     p.end()
@@ -191,8 +195,18 @@ def _svg_refresh(color: str, size: int) -> QPixmap:
     cx, cy = size / 2, size / 2
     r = size * 0.3
     p.drawArc(int(cx - r), int(cy - r), int(r * 2), int(r * 2), 30 * 16, 270 * 16)
-    p.drawLine(int(cx + r * 0.86), int(cy - r * 0.5), int(cx + r * 0.86 + size * 0.12), int(cy - r * 0.5 + size * 0.12))
-    p.drawLine(int(cx + r * 0.86), int(cy - r * 0.5), int(cx + r * 0.86 + size * 0.12), int(cy - r * 0.5 - size * 0.12))
+    p.drawLine(
+        int(cx + r * 0.86),
+        int(cy - r * 0.5),
+        int(cx + r * 0.86 + size * 0.12),
+        int(cy - r * 0.5 + size * 0.12),
+    )
+    p.drawLine(
+        int(cx + r * 0.86),
+        int(cy - r * 0.5),
+        int(cx + r * 0.86 + size * 0.12),
+        int(cy - r * 0.5 - size * 0.12),
+    )
     p.end()
     return pm
 
@@ -236,14 +250,16 @@ def _svg_browse(color: str, size: int) -> QPixmap:
     p.setPen(Qt.PenStyle.NoPen)
     c = QColor(color)
     p.setBrush(c)
-    p.drawPolygon(_polygon(
-        (size * 0.1, size * 0.35),
-        (size * 0.3, size * 0.35),
-        (size * 0.35, size * 0.45),
-        (size * 0.9, size * 0.45),
-        (size * 0.9, size * 0.85),
-        (size * 0.1, size * 0.85),
-    ))
+    p.drawPolygon(
+        _polygon(
+            (size * 0.1, size * 0.35),
+            (size * 0.3, size * 0.35),
+            (size * 0.35, size * 0.45),
+            (size * 0.9, size * 0.45),
+            (size * 0.9, size * 0.85),
+            (size * 0.1, size * 0.85),
+        )
+    )
     p.end()
     return pm
 
@@ -260,11 +276,13 @@ def _svg_play(color: str, size: int) -> QPixmap:
     c = QColor(color)
     p.setBrush(c)
     cx, cy = size / 2, size / 2
-    p.drawPolygon(_polygon(
-        (cx - size * 0.1, cy - size * 0.3),
-        (cx - size * 0.1, cy + size * 0.3),
-        (cx + size * 0.3, cy),
-    ))
+    p.drawPolygon(
+        _polygon(
+            (cx - size * 0.1, cy - size * 0.3),
+            (cx - size * 0.1, cy + size * 0.3),
+            (cx + size * 0.3, cy),
+        )
+    )
     p.end()
     return pm
 
@@ -345,11 +363,13 @@ def _svg_check(color: str, size: int) -> QPixmap:
     p = QPainter(pm)
     _pen_width(p, color, size * 0.15)
     p.setBrush(Qt.GlobalColor.transparent)
-    p.drawLines(_points(
-        (size * 0.15, size * 0.5),
-        (size * 0.35, size * 0.7),
-        (size * 0.85, size * 0.3),
-    ))
+    p.drawLines(
+        _points(
+            (size * 0.15, size * 0.5),
+            (size * 0.35, size * 0.7),
+            (size * 0.85, size * 0.3),
+        )
+    )
     p.end()
     return pm
 
@@ -363,11 +383,13 @@ def _svg_warning(color: str, size: int) -> QPixmap:
     p.setBrush(c)
     cx, cy = size / 2, size / 2
     r = size * 0.38
-    p.drawPolygon(_polygon(
-        (cx, cy - r),
-        (cx - r * 0.9, cy + r * 0.6),
-        (cx + r * 0.9, cy + r * 0.6),
-    ))
+    p.drawPolygon(
+        _polygon(
+            (cx, cy - r),
+            (cx - r * 0.9, cy + r * 0.6),
+            (cx + r * 0.9, cy + r * 0.6),
+        )
+    )
     p.setBrush(Qt.GlobalColor.transparent)
     _pen_width(p, "#0A0A0A", size * 0.08)
     p.drawLine(int(cx), int(cy - r * 0.4), int(cx), int(cy + r * 0.2))
@@ -416,11 +438,13 @@ def _svg_chevron_right(color: str, size: int) -> QPixmap:
     p = QPainter(pm)
     _pen_width(p, color, size * 0.15)
     p.setBrush(Qt.GlobalColor.transparent)
-    p.drawLines(_points(
-        (size * 0.35, size * 0.2),
-        (size * 0.65, size * 0.5),
-        (size * 0.35, size * 0.8),
-    ))
+    p.drawLines(
+        _points(
+            (size * 0.35, size * 0.2),
+            (size * 0.65, size * 0.5),
+            (size * 0.35, size * 0.8),
+        )
+    )
     p.end()
     return pm
 
@@ -431,11 +455,13 @@ def _svg_chevron_down(color: str, size: int) -> QPixmap:
     p = QPainter(pm)
     _pen_width(p, color, size * 0.15)
     p.setBrush(Qt.GlobalColor.transparent)
-    p.drawLines(_points(
-        (size * 0.2, size * 0.35),
-        (size * 0.5, size * 0.65),
-        (size * 0.8, size * 0.35),
-    ))
+    p.drawLines(
+        _points(
+            (size * 0.2, size * 0.35),
+            (size * 0.5, size * 0.65),
+            (size * 0.8, size * 0.35),
+        )
+    )
     p.end()
     return pm
 
@@ -446,12 +472,14 @@ def _svg_close(color: str, size: int) -> QPixmap:
     p = QPainter(pm)
     _pen_width(p, color, size * 0.15)
     p.setBrush(Qt.GlobalColor.transparent)
-    p.drawLines(_points(
-        (size * 0.2, size * 0.2),
-        (size * 0.8, size * 0.8),
-        (size * 0.8, size * 0.2),
-        (size * 0.2, size * 0.8),
-    ))
+    p.drawLines(
+        _points(
+            (size * 0.2, size * 0.2),
+            (size * 0.8, size * 0.8),
+            (size * 0.8, size * 0.2),
+            (size * 0.2, size * 0.8),
+        )
+    )
     p.end()
     return pm
 
@@ -490,13 +518,15 @@ def _svg_folder(color: str, size: int) -> QPixmap:
     p.setPen(Qt.PenStyle.NoPen)
     c = QColor(color)
     p.setBrush(c)
-    p.drawPolygon(_polygon(
-        (size * 0.1, size * 0.35),
-        (size * 0.3, size * 0.35),
-        (size * 0.35, size * 0.45),
-        (size * 0.9, size * 0.45),
-        (size * 0.9, size * 0.85),
-        (size * 0.1, size * 0.85),
-    ))
+    p.drawPolygon(
+        _polygon(
+            (size * 0.1, size * 0.35),
+            (size * 0.3, size * 0.35),
+            (size * 0.35, size * 0.45),
+            (size * 0.9, size * 0.45),
+            (size * 0.9, size * 0.85),
+            (size * 0.1, size * 0.85),
+        )
+    )
     p.end()
     return pm

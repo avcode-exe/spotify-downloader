@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import json
+import logging
 import shutil
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from .manifest import DuplicateGroup
+
+logger = logging.getLogger(__name__)
 
 
 def _unique_path(path: Path) -> Path:
@@ -25,9 +28,9 @@ def _unique_path(path: Path) -> Path:
 def quarantine_duplicate_copies(
     duplicate_groups: list[DuplicateGroup],
     output_folder: str | Path,
-) -> tuple[int, Path]:
+) -> tuple[int, Path, list[str]]:
     root = Path(output_folder).expanduser().resolve()
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    timestamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
     destination = root / "duplicates" / timestamp
     moved: list[dict[str, str]] = []
 
@@ -49,15 +52,20 @@ def quarantine_duplicate_copies(
                         "normalized_name": track.normalized_name,
                     }
                 )
-            except OSError:
-                continue
+            except OSError as exc:
+                logger.warning(
+                    "Failed to move duplicate %s -> %s: %s",
+                    track.path,
+                    target,
+                    exc,
+                )
 
     if moved:
         manifest_path = destination / "manifest.json"
         manifest_path.write_text(
             json.dumps(
                 {
-                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "created_at": datetime.now(UTC).isoformat(),
                     "moved": moved,
                 },
                 indent=2,
@@ -65,7 +73,7 @@ def quarantine_duplicate_copies(
             ),
             encoding="utf-8",
         )
-    return len(moved), destination
+    return len(moved), destination, [entry["normalized_name"] for entry in moved]
 
 
 def format_quarantine_summary(count: int, destination: Path) -> str:

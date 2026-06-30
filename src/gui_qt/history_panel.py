@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QCursor
 from PySide6.QtWidgets import (
     QHeaderView,
     QLabel,
@@ -33,14 +34,17 @@ class HistoryPanel(QWidget):
         layout.addWidget(title)
 
         self._table = QTableWidget()
+        self._table.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self._table.setColumnCount(5)
-        self._table.setHorizontalHeaderLabels(
-            ["Timestamp", "URL", "Tracks", "Status", "Folder"]
-        )
+        self._table.setHorizontalHeaderLabels(["Timestamp", "URL", "Tracks", "Status", "Folder"])
         self._table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         self._table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
-        self._table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
-        self._table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        self._table.horizontalHeader().setSectionResizeMode(
+            2, QHeaderView.ResizeMode.ResizeToContents
+        )
+        self._table.horizontalHeader().setSectionResizeMode(
+            3, QHeaderView.ResizeMode.ResizeToContents
+        )
         self._table.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
         self._table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self._table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
@@ -65,7 +69,7 @@ class HistoryPanel(QWidget):
         """)
         layout.addWidget(self._table)
 
-    def render(self, history: list[dict], track_state_summary: dict[str, int]) -> None:
+    def render(self, history: list[dict]) -> None:
         self._table.setRowCount(len(history))
 
         for i, entry in enumerate(history):
@@ -101,21 +105,3 @@ class HistoryPanel(QWidget):
                 status_item.setForeground(Qt.GlobalColor.red)
             elif status == "CANCELLED":
                 status_item.setForeground(Qt.GlobalColor.yellow)
-
-        # Add track state summary row
-        if history:
-            pass  # separator not supported in QTableWidget
-
-        state_row = len(history) + 1
-        self._table.setRowCount(state_row)
-
-        for j, label in enumerate(["downloaded", "skipped", "failed", "quarantined"]):
-            count = track_state_summary.get(label, 0)
-            self._table.setItem(state_row, j, QTableWidgetItem(str(count)))
-
-        # Set label for state row
-        state_labels = ["State:", "", "", "Sum", ""]
-        for j, txt in enumerate(state_labels):
-            item = QTableWidgetItem(txt)
-            item.setForeground(Qt.GlobalColor.gray)
-            self._table.setItem(state_row, j, item)

@@ -34,6 +34,7 @@ Compression=lzma2/ultra64
 LZMAUseSeparateProcess=yes
 SolidCompression=yes
 WizardStyle=modern
+SetupIconFile=assets\icon.ico
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"

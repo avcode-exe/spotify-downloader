@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QCursor
 from PySide6.QtWidgets import (
     QHeaderView,
     QLabel,
@@ -34,6 +36,7 @@ class PreviewPanel(QWidget):
         layout.addWidget(title)
 
         self._table = QTableWidget()
+        self._table.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self._table.setColumnCount(7)
         self._table.setHorizontalHeaderLabels(
             ["Title", "Artist", "Album", "Duration", "Bitrate", "Size", "File"]

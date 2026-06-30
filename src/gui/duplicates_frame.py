@@ -7,13 +7,13 @@ from src.models import DuplicateGroup
 from .theme import (
     FONT_SECTION,
     FONT_SMALL,
+    GAP_CARD_INNER,
+    GAP_ROW,
     SPOTIFY_BORDER_COLOR,
     SPOTIFY_DARK_GRAY,
     SPOTIFY_LIGHT_GRAY,
     SPOTIFY_WHITE,
     frame_kwargs,
-    GAP_CARD_INNER,
-    GAP_ROW,
 )
 
 
@@ -61,12 +61,12 @@ class DuplicatesFrame(ctk.CTkFrame):
                 keep_name = keep.path.name if keep else "unknown"
                 action = "move" if group.safe_to_move else "review"
                 lines.append("")
-                lines.append("  {}: {}".format(group.reason, group.key))
-                lines.append("    keep: {}".format(keep_name))
+                lines.append(f"  {group.reason}: {group.key}")
+                lines.append(f"    keep: {keep_name}")
                 for track in group.tracks:
                     if track is keep:
                         continue
-                    lines.append("    {}: {}".format(action, track.path.name))
+                    lines.append(f"    {action}: {track.path.name}")
                 lines.append("")
 
         self._text.insert("end", "\n".join(lines) + "\n")

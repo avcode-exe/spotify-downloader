@@ -6,8 +6,8 @@ from unittest.mock import ANY, MagicMock
 import pytest
 
 from src.gui.workers import (
-    DOWNLOADING_RE,
     DONE_RE,
+    DOWNLOADING_RE,
     ERROR_RE,
     FOUND_RE,
     SKIPPED_RE,
@@ -163,12 +163,9 @@ class TestSpotDLWorkerRecordFailedTrack:
         # than mutating an internal list, so the controller can own retry state.
         events: list[WorkerResult] = []
         worker._on_event = events.append
-        worker._record_failed_track(
-            "Failed to download https://open.spotify.com/track/abc123"
-        )
+        worker._record_failed_track("Failed to download https://open.spotify.com/track/abc123")
         assert any(
-            r.kind == "failed"
-            and r.data.get("url") == "https://open.spotify.com/track/abc123"
+            r.kind == "failed" and r.data.get("url") == "https://open.spotify.com/track/abc123"
             for r in events
         )
         state = worker._track_state
@@ -233,9 +230,7 @@ class TestRetryContract:
                 return exc.value
             raise AssertionError("coroutine suspended unexpectedly")
 
-        monkeypatch.setattr(
-            "src.gui.workers.validate_and_ensure_deno", fake_validate_and_deno
-        )
+        monkeypatch.setattr("src.gui.workers.validate_and_ensure_deno", fake_validate_and_deno)
         monkeypatch.setattr("asyncio.run", _drive)
 
         urls = [

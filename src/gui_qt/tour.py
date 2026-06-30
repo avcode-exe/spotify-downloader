@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QCursor
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
@@ -112,6 +113,7 @@ class TourOverlay(QWidget):
 
         self._prev_btn = QPushButton("Previous")
         self._prev_btn.setFont(get_button_font())
+        self._prev_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self._prev_btn.setObjectName("ghost")
         self._prev_btn.clicked.connect(self._prev)
         nav.addWidget(self._prev_btn)
@@ -119,12 +121,14 @@ class TourOverlay(QWidget):
         btn_row = QHBoxLayout()
         self._next_btn = QPushButton("Next")
         self._next_btn.setFont(get_button_font())
+        self._next_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self._next_btn.setObjectName("primary")
         self._next_btn.clicked.connect(self._next)
         btn_row.addWidget(self._next_btn)
 
         self._skip_btn = QPushButton("Skip Tour")
         self._skip_btn.setFont(get_button_font())
+        self._skip_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self._skip_btn.setObjectName("ghost")
         self._skip_btn.clicked.connect(self._close)
         btn_row.addWidget(self._skip_btn)

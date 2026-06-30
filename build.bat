@@ -38,6 +38,9 @@ echo [4/5] Building executable...
 set PYTHONOPTIMIZE=2
 pyinstaller --noconfirm --clean ^
     --name "SpotifyDownloader" ^
+    --icon "assets/icon.ico" ^
+    --add-data "src;src" ^
+    --add-data "assets;assets" ^
     --hidden-import PySide6.QtWidgets ^
     --hidden-import PySide6.QtCore ^
     --hidden-import PySide6.QtGui ^

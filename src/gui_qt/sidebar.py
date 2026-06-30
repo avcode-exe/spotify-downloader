@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QColor, QPalette
+from PySide6.QtGui import QColor, QCursor, QPalette
 from PySide6.QtWidgets import (
     QFrame,
+    QLabel,
+    QListWidget,
+    QListWidgetItem,
     QPushButton,
     QSizePolicy,
     QVBoxLayout,
@@ -49,8 +52,6 @@ class Sidebar(QWidget):
         title_layout.setContentsMargins(16, 16, 16, 12)
         title_layout.setSpacing(2)
 
-        from PySide6.QtWidgets import QLabel
-
         name_lbl = QLabel("Spotify Downloader")
         name_lbl.setStyleSheet("font-size: 13pt; font-weight: bold; color: #FFFFFF;")
         name_lbl.setObjectName("appName")
@@ -69,12 +70,11 @@ class Sidebar(QWidget):
         layout.addWidget(divider)
 
         # Navigation list
-        from PySide6.QtWidgets import QListWidget, QListWidgetItem
-
         self._list = QListWidget()
         self._list.setObjectName("sidebar")
         self._list.setSpacing(4)
         self._list.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self._list.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
 
         for section_id, display_name, tooltip in self.SECTIONS:
             item = QListWidgetItem(
@@ -100,6 +100,7 @@ class Sidebar(QWidget):
         self._cancel_btn.setFont(get_button_font())
         self._cancel_btn.setProperty("type", "ghost")
         self._cancel_btn.setEnabled(False)
+        self._cancel_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self._cancel_btn.setMinimumHeight(34)
         self._cancel_btn.setStyleSheet("""
             QPushButton {
@@ -124,6 +125,7 @@ class Sidebar(QWidget):
         # Quit button
         self._quit_btn = QPushButton("✕  Quit")
         self._quit_btn.setFont(get_button_font())
+        self._quit_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self._quit_btn.setMinimumHeight(34)
         pal = self._quit_btn.palette()
         pal.setColor(QPalette.ColorRole.Button, QColor("#E91429"))
